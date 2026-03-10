@@ -12,6 +12,8 @@ concurrency:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,6 +33,8 @@ jobs:
   tests:
     needs: quality-gate
     runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,11 +48,19 @@ jobs:
         run: pytest --cov=src --cov-report=xml
       - name: Build default STEP artifact
         run: python -m programmatic_drafting.cli export-electrode-advisor-default
+      - name: Build cylindrical bath STEP artifact
+        run: python -m programmatic_drafting.cli export-cylindrical-bath-layout
+      - name: Build vessel drafter STEP artifact
+        run: python -m programmatic_drafting.cli export-vessel-drafter-default
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: electrode-advisor-default-layout
+          name: programmatic-drafting-step-artifacts
           path: |
             generated/electrode_advisor_default/electrode_advisor_default_layout.step
             generated/electrode_advisor_default/electrode_advisor_default_layout.json
+            generated/cylindrical_bath_layout/cylindrical_bath_layout.step
+            generated/cylindrical_bath_layout/cylindrical_bath_layout.json
+            generated/vessel_drafter_default/vessel_drafter_default.step
+            generated/vessel_drafter_default/vessel_drafter_default.json
           retention-days: 30

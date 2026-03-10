@@ -3,8 +3,8 @@
 Programmatic STEP drafting for D-sorganization projects.
 
 This repo is the CAD automation home for inspectable geometry exports that can be
-generated in CI and opened in FreeCAD locally. The first tracked project is the
-default electrode advisor layout from the current web tool.
+generated in CI and opened in FreeCAD locally. It currently tracks the default
+electrode advisor layout from the web tool plus standalone drafting studies.
 
 ## Why this repo exists
 
@@ -12,7 +12,7 @@ default electrode advisor layout from the current web tool.
 - Uses code as the source of truth for geometry and exports reproducible STEP files.
 - Makes STEP generation CI-friendly instead of depending on a desktop FreeCAD install.
 
-## Current project
+## Current projects
 
 - `electrode_advisor_default_layout`
   - Source of truth: `Tools/src/electrode_advisor/web/src/components/GlassBath3DViewer.tsx`
@@ -22,11 +22,30 @@ default electrode advisor layout from the current web tool.
   - Default electrode length: `1500 mm`
   - Default worn length: `150 mm`
   - Default operating current: `2500 A`
+- `cylindrical_bath_layout`
+  - Bath: `50 in` inner diameter, `14 in` depth
+  - Refractory annulus: `6 in` radial thickness
+  - Electrodes: `3`, radial, `120 deg` apart
+  - Electrode diameter: `2 in`
+  - Electrode insertion into inner circle: `14 in`
+  - Electrode extension outside inner circle: `36 in`
+  - Vertical placement assumption: mid-depth centerline
+- `vessel_drafter_default`
+  - Bath: `50 in` inner diameter, `14 in` glass depth
+  - Plenum: `14 in` above the glass bath
+  - Layer stackup: `6 in` hot face, `4.5 in` IFB, `1 in` duraboard, `0.5 in` steel
+  - Dished heads: top and bottom spherical-cap approximation scaled from the inner head depth
+  - Colors: orange glass, reddish-orange hot face, tan IFB, white duraboard, grey steel
+  - GUI: PyQt6 vessel editor with live cross-section and plan previews plus STEP export
 
 Generated artifacts:
 
 - `generated/electrode_advisor_default/electrode_advisor_default_layout.step`
 - `generated/electrode_advisor_default/electrode_advisor_default_layout.json`
+- `generated/cylindrical_bath_layout/cylindrical_bath_layout.step`
+- `generated/cylindrical_bath_layout/cylindrical_bath_layout.json`
+- `generated/vessel_drafter_default/vessel_drafter_default.step`
+- `generated/vessel_drafter_default/vessel_drafter_default.json`
 
 ## Quick Start
 
@@ -35,9 +54,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
 python -m programmatic_drafting.cli export-electrode-advisor-default
+python -m programmatic_drafting.cli export-cylindrical-bath-layout
+python -m programmatic_drafting.cli export-vessel-drafter-default
+python -m programmatic_drafting.cli launch-vessel-drafter-gui
 ```
 
 Open the generated STEP file in FreeCAD for inspection.
+You can also launch the dedicated GUI with `vessel-drafter`.
 
 ## Repo Outline
 
@@ -47,6 +70,10 @@ Open the generated STEP file in FreeCAD for inspection.
   - Concrete drafting projects and shape builders.
 - `src/programmatic_drafting/exporters/`
   - STEP export utilities and manifest writers.
+- `src/programmatic_drafting/preview/`
+  - Preview data builders shared by the GUI.
+- `src/programmatic_drafting/gui/`
+  - PyQt6 user interfaces for interactive drafting tools.
 - `tests/`
   - Contract tests for default values, layout math, and STEP export.
 - `docs/projects/`

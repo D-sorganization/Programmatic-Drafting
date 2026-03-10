@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "build123d==0.10.0",
+  "PyQt6==6.8.1",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,7 @@ dev = [
 
 [project.scripts]
 programmatic-drafting = "programmatic_drafting.cli:main"
+vessel-drafter = "programmatic_drafting.gui.vessel_drafter_window:launch"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -43,4 +45,3 @@ select = ["E", "F", "I", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
