@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QGraphicsScene,
-    QGraphicsView,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -32,6 +31,7 @@ from programmatic_drafting.gui.vessel_drafter_rendering import (
     render_cross_section,
     render_plan,
 )
+from programmatic_drafting.gui.zoomable_graphics_view import ZoomableGraphicsView
 from programmatic_drafting.models.vessel_drafter import (
     DEFAULT_VESSEL_DRAFTER_LAYOUT,
     VesselDrafterLayout,
@@ -76,9 +76,11 @@ class VesselDrafterWindow(QMainWindow):
         )
 
         self.cross_section_scene = QGraphicsScene(self)
-        self.cross_section_view = QGraphicsView(self.cross_section_scene)
+        self.cross_section_view = ZoomableGraphicsView(self)
+        self.cross_section_view.setScene(self.cross_section_scene)
         self.plan_scene = QGraphicsScene(self)
-        self.plan_view = QGraphicsView(self.plan_scene)
+        self.plan_view = ZoomableGraphicsView(self)
+        self.plan_view.setScene(self.plan_scene)
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
 
@@ -126,10 +128,14 @@ class VesselDrafterWindow(QMainWindow):
         controls_scroll.setMinimumWidth(340)
 
         preview_layout = QVBoxLayout()
-        preview_layout.addWidget(QLabel("Cross-Section Preview"))
-        preview_layout.addWidget(self.cross_section_view, 1)
-        preview_layout.addWidget(QLabel("Top View Preview"))
-        preview_layout.addWidget(self.plan_view, 1)
+        preview_layout.addWidget(
+            self._build_preview_panel("Cross-Section Preview", self.cross_section_view),
+            1,
+        )
+        preview_layout.addWidget(
+            self._build_preview_panel("Top View Preview", self.plan_view),
+            1,
+        )
 
         main_layout = QHBoxLayout(root)
         main_layout.addWidget(controls_scroll, 0)
@@ -270,6 +276,8 @@ class VesselDrafterWindow(QMainWindow):
             build_cross_section_preview(layout),
         )
         render_plan(self.plan_scene, build_plan_preview(layout))
+        self.cross_section_view.sync_to_scene()
+        self.plan_view.sync_to_scene()
         self.status_label.setText(
             f"Outer diameter: {layout.outer_diameter_in:.2f} in | "
             f"Full height: {layout.full_height_in:.2f} in | "
@@ -351,6 +359,32 @@ class VesselDrafterWindow(QMainWindow):
     def _remove_selected_lid_ports(self) -> None:
         self.lid_port_panel.remove_selected_rows()
         self.update_preview()
+
+    def _build_preview_panel(
+        self,
+        title: str,
+        view: ZoomableGraphicsView,
+    ) -> QWidget:
+        title_label = QLabel(title)
+        zoom_in_button = QPushButton("+")
+        zoom_in_button.clicked.connect(view.zoom_in)
+        zoom_out_button = QPushButton("-")
+        zoom_out_button.clicked.connect(view.zoom_out)
+        reset_button = QPushButton("Reset")
+        reset_button.clicked.connect(view.reset_zoom)
+
+        header_layout = QHBoxLayout()
+        header_layout.addWidget(title_label)
+        header_layout.addStretch(1)
+        header_layout.addWidget(zoom_out_button)
+        header_layout.addWidget(zoom_in_button)
+        header_layout.addWidget(reset_button)
+
+        panel = QWidget()
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.addLayout(header_layout)
+        panel_layout.addWidget(view, 1)
+        return panel
 
 
 def launch() -> int:
