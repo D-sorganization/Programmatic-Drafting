@@ -386,7 +386,8 @@ class VesselDrafterWindow(QMainWindow):
                 _band_pen(),
                 QBrush(QColor(band.color_hex)),
             )
-            ellipse.setZValue(1.0)
+            if ellipse is not None:
+                ellipse.setZValue(1.0)
 
         electrode_pen = QPen(QColor("#2B2B2B"))
         electrode_pen.setWidth(3)
