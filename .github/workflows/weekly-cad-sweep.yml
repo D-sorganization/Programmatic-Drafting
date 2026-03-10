@@ -1,0 +1,33 @@
+name: Weekly CAD Sweep
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-cad-sweep-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate-default-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+      - name: Export default electrode advisor layout
+        run: python -m programmatic_drafting.cli export-electrode-advisor-default
+      - name: Upload weekly artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-electrode-advisor-default-layout
+          path: |
+            generated/electrode_advisor_default/electrode_advisor_default_layout.step
+            generated/electrode_advisor_default/electrode_advisor_default_layout.json
+          retention-days: 30
