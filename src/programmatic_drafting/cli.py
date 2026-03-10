@@ -10,9 +10,6 @@ from programmatic_drafting.exporters.step_export import (
     export_default_layout_step,
     export_vessel_drafter_default_step,
 )
-from programmatic_drafting.gui.vessel_drafter_window import (
-    launch as launch_vessel_drafter,
-)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -100,6 +97,10 @@ def main() -> int:
         return 0
 
     if args.command == "launch-vessel-drafter-gui":
+        from programmatic_drafting.gui.vessel_drafter_window import (
+            launch as launch_vessel_drafter,
+        )
+
         return launch_vessel_drafter()
 
     parser.error(f"Unknown command: {args.command}")
