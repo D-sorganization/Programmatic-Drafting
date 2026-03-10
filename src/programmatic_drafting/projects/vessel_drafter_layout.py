@@ -5,26 +5,32 @@ from __future__ import annotations
 from math import cos, sin
 
 from build123d import (
-    Align,
-    Box,
-    BuildPart,
+    Axis,
+    BuildLine,
+    BuildSketch,
     Color,
     Compound,
-    Cylinder,
-    Locations,
-    Mode,
     Plane,
+    Polyline,
     Solid,
-    Sphere,
-    add,
+    make_face,
+    revolve,
 )
 
 from programmatic_drafting.models.vessel_drafter import (
     DEFAULT_VESSEL_DRAFTER_LAYOUT,
     MM_PER_INCH,
-    RadialBand,
     VesselDrafterLayout,
     VesselElectrodePlacement,
+    VesselLidPort,
+    VesselSidePort,
+)
+from programmatic_drafting.projects.vessel_drafter_profiles import (
+    ProfilePoint,
+    build_cavity_boundary_half,
+    build_glass_boundary_half,
+    build_shell_band_profiles,
+    build_shell_boundary_half,
 )
 
 
@@ -41,161 +47,48 @@ def _apply_style(shape, label: str, color_hex: str):
     return shape
 
 
-def _cap_sphere_radius(base_radius_mm: float, cap_height_mm: float) -> float:
-    return ((base_radius_mm**2) + (cap_height_mm**2)) / (2.0 * cap_height_mm)
+def _points_to_mm(points: tuple[ProfilePoint, ...]) -> list[tuple[float, float]]:
+    return [(point.x_in * MM_PER_INCH, point.z_in * MM_PER_INCH) for point in points]
 
 
-def _build_spherical_cap(
-    base_radius_mm: float,
-    cap_height_mm: float,
-    springline_z_mm: float,
-    upward: bool,
-):
-    sphere_radius = _cap_sphere_radius(base_radius_mm, cap_height_mm)
-    center_z_mm = (
-        springline_z_mm + cap_height_mm - sphere_radius
-        if upward
-        else springline_z_mm - cap_height_mm + sphere_radius
-    )
-    clip_extent_mm = max(base_radius_mm, cap_height_mm, sphere_radius) * 4.0
-
-    with BuildPart() as spherical_cap:
-        with Locations((0.0, 0.0, center_z_mm)):
-            Sphere(radius=sphere_radius)
-        with Locations((0.0, 0.0, springline_z_mm)):
-            Box(
-                clip_extent_mm,
-                clip_extent_mm,
-                clip_extent_mm,
-                align=(
-                    Align.CENTER,
-                    Align.CENTER,
-                    Align.MAX if upward else Align.MIN,
-                ),
-                mode=Mode.SUBTRACT,
-            )
-
-    return spherical_cap.part
-
-
-def _build_head_region(
-    inner_base_radius_mm: float | None,
-    outer_base_radius_mm: float,
-    inner_head_depth_mm: float | None,
-    outer_head_depth_mm: float,
-    springline_z_mm: float,
-    upward: bool,
+def _build_revolved_profile(
+    half_profile: tuple[ProfilePoint, ...],
     label: str,
     color_hex: str,
 ):
-    outer_cap = _build_spherical_cap(
-        base_radius_mm=outer_base_radius_mm,
-        cap_height_mm=outer_head_depth_mm,
-        springline_z_mm=springline_z_mm,
-        upward=upward,
-    )
-    with BuildPart() as head_region:
-        add(outer_cap)
-        if inner_base_radius_mm is not None and inner_head_depth_mm is not None:
-            inner_cap = _build_spherical_cap(
-                base_radius_mm=inner_base_radius_mm,
-                cap_height_mm=inner_head_depth_mm,
-                springline_z_mm=springline_z_mm,
-                upward=upward,
-            )
-            add(inner_cap, mode=Mode.SUBTRACT)
-
-    return _apply_style(head_region.part, label, color_hex)
-
-
-def _build_sidewall_region(
-    band: RadialBand,
-    straight_height_mm: float,
-):
-    with BuildPart() as sidewall_region:
-        Cylinder(
-            radius=band.outer_radius_in * MM_PER_INCH,
-            height=straight_height_mm,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-        )
-        Cylinder(
-            radius=band.inner_radius_in * MM_PER_INCH,
-            height=straight_height_mm,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-            mode=Mode.SUBTRACT,
-        )
-
-    return _apply_style(sidewall_region.part, f"{band.name}_sidewall", band.color_hex)
+    with BuildSketch(Plane.XZ) as sketch:
+        with BuildLine():
+            Polyline(_points_to_mm(half_profile), close=True)
+        make_face()
+    part = revolve(sketch.sketch.face(), axis=Axis.Z)
+    return _apply_style(part, label, color_hex)
 
 
 def _build_glass_bath(layout: VesselDrafterLayout):
-    glass_band = layout.radial_bands[0]
-    glass = Cylinder(
-        radius=glass_band.outer_radius_in * MM_PER_INCH,
-        height=layout.glass_height_mm,
-        align=(Align.CENTER, Align.CENTER, Align.MIN),
+    return _build_revolved_profile(
+        build_glass_boundary_half(layout),
+        label="glass_bath",
+        color_hex=layout.layers[0].color_hex,
     )
-    return _apply_style(glass, glass_band.name, glass_band.color_hex)
 
 
-def _build_top_head_regions(layout: VesselDrafterLayout):
-    springline_z_mm = layout.straight_shell_height_mm
-    regions = []
-    inner_radius_in = layout.inner_radius_in
-    inner_head_depth_in = layout.head_depth_in
-
-    for band in layout.shell_bands:
-        outer_radius_in = band.outer_radius_in
-        outer_head_depth_in = layout.head_depth_for_radius_in(outer_radius_in)
-        regions.append(
-            _build_head_region(
-                inner_base_radius_mm=inner_radius_in * MM_PER_INCH,
-                outer_base_radius_mm=outer_radius_in * MM_PER_INCH,
-                inner_head_depth_mm=inner_head_depth_in * MM_PER_INCH,
-                outer_head_depth_mm=outer_head_depth_in * MM_PER_INCH,
-                springline_z_mm=springline_z_mm,
-                upward=True,
-                label=f"{band.name}_top_head",
-                color_hex=band.color_hex,
+def _build_shell_band_shapes(layout: VesselDrafterLayout):
+    shapes = []
+    for profile in build_shell_band_profiles(layout):
+        inner_half = (
+            build_cavity_boundary_half(layout)
+            if profile.inner_offset_in == 0.0
+            else build_shell_boundary_half(layout, profile.inner_offset_in)
+        )
+        outer_half = build_shell_boundary_half(layout, profile.outer_offset_in)
+        shapes.append(
+            _build_revolved_profile(
+                outer_half + tuple(reversed(inner_half)),
+                label=profile.band.label,
+                color_hex=profile.band.color_hex,
             )
         )
-        inner_radius_in = outer_radius_in
-        inner_head_depth_in = outer_head_depth_in
-
-    return regions
-
-
-def _build_bottom_head_regions(layout: VesselDrafterLayout):
-    springline_z_mm = 0.0
-    regions = []
-    inner_radius_in: float | None = None
-    inner_head_depth_in: float | None = None
-
-    for band in layout.shell_bands:
-        outer_radius_in = band.outer_radius_in
-        outer_head_depth_in = layout.head_depth_for_radius_in(outer_radius_in)
-        regions.append(
-            _build_head_region(
-                inner_base_radius_mm=(
-                    None if inner_radius_in is None else inner_radius_in * MM_PER_INCH
-                ),
-                outer_base_radius_mm=outer_radius_in * MM_PER_INCH,
-                inner_head_depth_mm=(
-                    None
-                    if inner_head_depth_in is None
-                    else inner_head_depth_in * MM_PER_INCH
-                ),
-                outer_head_depth_mm=outer_head_depth_in * MM_PER_INCH,
-                springline_z_mm=springline_z_mm,
-                upward=False,
-                label=f"{band.name}_bottom_head",
-                color_hex=band.color_hex,
-            )
-        )
-        inner_radius_in = outer_radius_in
-        inner_head_depth_in = outer_head_depth_in
-
-    return regions
+    return shapes
 
 
 def _build_electrode(
@@ -229,16 +122,89 @@ def _build_electrode(
     return _apply_style(electrode, f"electrode_{placement.index}", "#2B2B2B")
 
 
+def _build_side_port_cutter(
+    port: VesselSidePort,
+    layout: VesselDrafterLayout,
+):
+    direction_x = cos(port.normalized_clock_angle_radians)
+    direction_y = sin(port.normalized_clock_angle_radians)
+    start_radius_in = layout.inner_radius_in - 1.0
+    cutter_length_in = layout.total_shell_thickness_in + 2.0
+    plane = Plane(
+        origin=(
+            direction_x * start_radius_in * MM_PER_INCH,
+            direction_y * start_radius_in * MM_PER_INCH,
+            port.centerline_height_in(layout) * MM_PER_INCH,
+        ),
+        x_dir=(0.0, 0.0, 1.0),
+        z_dir=(direction_x, direction_y, 0.0),
+    )
+    return Solid.make_cylinder(
+        radius=port.radius_in * MM_PER_INCH,
+        height=cutter_length_in * MM_PER_INCH,
+        plane=plane,
+    )
+
+
+def _build_lid_port_cutter(
+    port: VesselLidPort,
+    layout: VesselDrafterLayout,
+):
+    direction_x = cos(port.normalized_clock_angle_radians)
+    direction_y = sin(port.normalized_clock_angle_radians)
+    start_z_in = layout.glass_depth_in
+    cutter_height_in = layout.plenum_height_in + layout.outer_head_depth_in + 1.0
+    plane = Plane(
+        origin=(
+            direction_x * port.radial_distance_from_center_in * MM_PER_INCH,
+            direction_y * port.radial_distance_from_center_in * MM_PER_INCH,
+            start_z_in * MM_PER_INCH,
+        ),
+        x_dir=(1.0, 0.0, 0.0),
+        z_dir=(0.0, 0.0, 1.0),
+    )
+    return Solid.make_cylinder(
+        radius=port.radius_in * MM_PER_INCH,
+        height=cutter_height_in * MM_PER_INCH,
+        plane=plane,
+    )
+
+
+def _port_cutters(layout: VesselDrafterLayout) -> tuple[Solid, ...]:
+    side_cutters = tuple(
+        _build_side_port_cutter(port, layout) for port in layout.side_ports
+    )
+    lid_cutters = tuple(
+        _build_lid_port_cutter(port, layout) for port in layout.lid_ports
+    )
+    return side_cutters + lid_cutters
+
+
+def _cut_ports(shape, cutters: tuple[Solid, ...]):
+    if not cutters:
+        return shape
+    return shape.cut(*cutters)
+
+
 def build_vessel_drafter_shape(
     layout: VesselDrafterLayout = DEFAULT_VESSEL_DRAFTER_LAYOUT,
 ) -> Compound:
-    children = [_build_glass_bath(layout)]
-    children.extend(
-        _build_sidewall_region(band, layout.straight_shell_height_mm)
-        for band in layout.shell_bands
-    )
-    children.extend(_build_top_head_regions(layout))
-    children.extend(_build_bottom_head_regions(layout))
+    cutters = _port_cutters(layout)
+    children = [
+        _apply_style(
+            _cut_ports(_build_glass_bath(layout), cutters),
+            "glass_bath",
+            layout.layers[0].color_hex,
+        ),
+        *(
+            _apply_style(_cut_ports(shape, cutters), band.label, band.color_hex)
+            for shape, band in zip(
+                _build_shell_band_shapes(layout),
+                layout.shell_bands,
+                strict=True,
+            )
+        ),
+    ]
     children.extend(
         _build_electrode(item, layout) for item in layout.electrode_placements
     )

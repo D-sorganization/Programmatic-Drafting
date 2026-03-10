@@ -34,8 +34,9 @@ electrode advisor layout from the web tool plus standalone drafting studies.
   - Bath: `50 in` inner diameter, `14 in` glass depth
   - Plenum: `14 in` above the glass bath
   - Layer stackup: `6 in` hot face, `4.5 in` IFB, `1 in` duraboard, `0.5 in` steel
-  - Dished heads: top and bottom spherical-cap approximation scaled from the inner head depth
+  - Dished heads: offset elliptical head profiles with constant-thickness shell layers
   - Colors: orange glass, reddish-orange hot face, tan IFB, white duraboard, grey steel
+  - Ports: multiple sidewall and lid ports with editable clocking, size, and placement
   - GUI: PyQt6 vessel editor with live cross-section and plan previews plus STEP export
 
 Generated artifacts:
@@ -67,13 +68,13 @@ You can also launch the dedicated GUI with `vessel-drafter`.
 - `src/programmatic_drafting/models/`
   - Geometry inputs and source-of-truth defaults copied from product code.
 - `src/programmatic_drafting/projects/`
-  - Concrete drafting projects and shape builders.
+  - Concrete drafting projects, profile helpers, and shape builders.
 - `src/programmatic_drafting/exporters/`
   - STEP export utilities and manifest writers.
 - `src/programmatic_drafting/preview/`
   - Preview data builders shared by the GUI.
 - `src/programmatic_drafting/gui/`
-  - PyQt6 user interfaces for interactive drafting tools.
+  - PyQt6 user interfaces, renderers, and port-editing widgets.
 - `tests/`
   - Contract tests for default values, layout math, and STEP export.
 - `docs/projects/`

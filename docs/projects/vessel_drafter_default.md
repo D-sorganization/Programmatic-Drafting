@@ -19,16 +19,22 @@ an interactive PyQt6 drafting tool.
 
 ## Modeling Notes
 
-- The top and bottom heads use an aspect-ratio-preserving spherical-cap
-  approximation based on the requested inner dish depth.
+- The top and bottom heads use offset elliptical profiles so the refractory and
+  shell layers remain constant thickness through the head sections.
 - Only the plenum above the glass bath is modeled as the internal void.
 - The bottom head is layered solid support beneath the flat-bottom glass bath.
 - STEP solids are exported with color metadata for glass, refractory, IFB,
   duraboard, steel, and electrodes.
+- Sidewall ports are radial cuts defined by clock angle, diameter, and height
+  above the glass surface.
+- Lid ports are vertical cuts defined by clock angle, diameter, and distance
+  from the vessel center.
 
 ## GUI Scope
 
 - Editable vessel, layer, and electrode dimensions.
-- Live cross-section preview for shell stackup and plenum.
-- Live top-view preview for radial electrode placement.
+- Add/remove sidewall ports and lid ports from the editor.
+- Live cross-section preview for shell stackup, plenum, and projected port
+  heights.
+- Live top-view preview for radial electrode placement and port placement.
 - STEP + JSON export from the current form state.

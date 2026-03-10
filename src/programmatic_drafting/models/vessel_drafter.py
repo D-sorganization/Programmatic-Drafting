@@ -10,6 +10,7 @@ from programmatic_drafting.contracts import (
     require_fraction,
     require_integer_at_least,
     require_less_or_equal,
+    require_nonnegative,
     require_positive,
 )
 
@@ -34,6 +35,10 @@ class RadialBand:
     def label(self) -> str:
         return self.name
 
+    @property
+    def inner_offset_in(self) -> float:
+        return self.inner_radius_in
+
 
 @dataclass(frozen=True)
 class VesselElectrodePlacement:
@@ -42,6 +47,62 @@ class VesselElectrodePlacement:
     angle_radians: float
     inner_tip_radius_in: float
     outer_tip_radius_in: float
+    diameter_in: float
+
+
+@dataclass(frozen=True)
+class VesselSidePort:
+    clock_angle_degrees: float
+    diameter_in: float
+    height_above_glass_surface_in: float
+
+    def __post_init__(self) -> None:
+        require_positive("diameter_in", self.diameter_in)
+        require_nonnegative(
+            "height_above_glass_surface_in",
+            self.height_above_glass_surface_in,
+        )
+
+    @property
+    def normalized_clock_angle_degrees(self) -> float:
+        return self.clock_angle_degrees % 360.0
+
+    @property
+    def normalized_clock_angle_radians(self) -> float:
+        return radians(self.normalized_clock_angle_degrees)
+
+    @property
+    def radius_in(self) -> float:
+        return self.diameter_in * 0.5
+
+    def centerline_height_in(self, layout: VesselDrafterLayout) -> float:
+        return layout.glass_depth_in + self.height_above_glass_surface_in
+
+
+@dataclass(frozen=True)
+class VesselLidPort:
+    clock_angle_degrees: float
+    diameter_in: float
+    radial_distance_from_center_in: float
+
+    def __post_init__(self) -> None:
+        require_positive("diameter_in", self.diameter_in)
+        require_nonnegative(
+            "radial_distance_from_center_in",
+            self.radial_distance_from_center_in,
+        )
+
+    @property
+    def normalized_clock_angle_degrees(self) -> float:
+        return self.clock_angle_degrees % 360.0
+
+    @property
+    def normalized_clock_angle_radians(self) -> float:
+        return radians(self.normalized_clock_angle_degrees)
+
+    @property
+    def radius_in(self) -> float:
+        return self.diameter_in * 0.5
 
 
 @dataclass(frozen=True)
@@ -59,6 +120,8 @@ class VesselDrafterLayout:
     electrode_insertion_into_inner_circle_in: float = 14.0
     electrode_extension_past_inner_circle_in: float = 36.0
     electrode_centerline_height_fraction: float = 0.5
+    side_ports: tuple[VesselSidePort, ...] = ()
+    lid_ports: tuple[VesselLidPort, ...] = ()
 
     def __post_init__(self) -> None:
         require_positive("inner_diameter_in", self.inner_diameter_in)
@@ -88,6 +151,8 @@ class VesselDrafterLayout:
             self.electrode_insertion_into_inner_circle_in,
             self.inner_radius_in,
         )
+        self._validate_side_ports()
+        self._validate_lid_ports()
 
     @property
     def inner_radius_in(self) -> float:
@@ -96,6 +161,10 @@ class VesselDrafterLayout:
     @property
     def straight_shell_height_in(self) -> float:
         return self.glass_depth_in + self.plenum_height_in
+
+    @property
+    def total_shell_thickness_in(self) -> float:
+        return sum(layer.thickness_in for layer in self.layers[1:])
 
     @property
     def outer_radius_in(self) -> float:
@@ -115,7 +184,7 @@ class VesselDrafterLayout:
 
     @property
     def outer_head_depth_in(self) -> float:
-        return self.head_depth_for_radius_in(self.outer_radius_in)
+        return self.head_depth_for_offset_in(self.total_shell_thickness_in)
 
     @property
     def glass_height_mm(self) -> float:
@@ -164,11 +233,7 @@ class VesselDrafterLayout:
     def layers(self) -> tuple[MaterialLayer, ...]:
         return (
             MaterialLayer("glass_bath", self.inner_radius_in, "#F28C28"),
-            MaterialLayer(
-                "hot_face_refractory",
-                self.hot_face_thickness_in,
-                "#D95F02",
-            ),
+            MaterialLayer("hot_face_refractory", self.hot_face_thickness_in, "#D95F02"),
             MaterialLayer("ifb", self.ifb_thickness_in, "#C7A46A"),
             MaterialLayer("duraboard", self.duraboard_thickness_in, "#F5F5F0"),
             MaterialLayer("steel_shell", self.steel_thickness_in, "#8A8F98"),
@@ -216,13 +281,35 @@ class VesselDrafterLayout:
                     angle_radians=radians(angle_degrees),
                     inner_tip_radius_in=self.electrode_inner_tip_radius_in,
                     outer_tip_radius_in=self.electrode_outer_tip_radius_in,
+                    diameter_in=self.electrode_diameter_in,
                 )
             )
         return tuple(placements)
 
-    def head_depth_for_radius_in(self, radius_in: float) -> float:
-        require_positive("radius_in", radius_in)
-        return self.head_depth_in * (radius_in / self.inner_radius_in)
+    def head_depth_for_offset_in(self, offset_in: float) -> float:
+        require_nonnegative("offset_in", offset_in)
+        return self.head_depth_in + offset_in
+
+    def _validate_side_ports(self) -> None:
+        for index, port in enumerate(self.side_ports):
+            require_less_or_equal(
+                f"side_ports[{index}].height_above_glass_surface_in",
+                port.height_above_glass_surface_in + port.radius_in,
+                self.plenum_height_in,
+            )
+            require_less_or_equal(
+                f"side_ports[{index}].diameter_in",
+                port.radius_in,
+                port.height_above_glass_surface_in,
+            )
+
+    def _validate_lid_ports(self) -> None:
+        for index, port in enumerate(self.lid_ports):
+            require_less_or_equal(
+                f"lid_ports[{index}].radial_distance_from_center_in",
+                port.radial_distance_from_center_in + port.radius_in,
+                self.outer_radius_in,
+            )
 
     def to_manifest(self) -> dict[str, Any]:
         return {
@@ -235,6 +322,7 @@ class VesselDrafterLayout:
                 "head_depth_in": self.head_depth_in,
                 "outer_diameter_in": self.outer_diameter_in,
                 "full_height_in": self.full_height_in,
+                "outer_head_depth_in": self.outer_head_depth_in,
             },
             "materials": {
                 layer.name: {
@@ -259,10 +347,36 @@ class VesselDrafterLayout:
                 "modeled_length_in": self.electrode_length_in,
                 "centerline_height_in": self.electrode_centerline_height_in,
             },
+            "ports": {
+                "side": [
+                    {
+                        "clock_angle_degrees": port.normalized_clock_angle_degrees,
+                        "diameter_in": port.diameter_in,
+                        "height_above_glass_surface_in": (
+                            port.height_above_glass_surface_in
+                        ),
+                        "centerline_height_in": port.centerline_height_in(self),
+                    }
+                    for port in self.side_ports
+                ],
+                "lid": [
+                    {
+                        "clock_angle_degrees": port.normalized_clock_angle_degrees,
+                        "diameter_in": port.diameter_in,
+                        "radial_distance_from_center_in": (
+                            port.radial_distance_from_center_in
+                        ),
+                    }
+                    for port in self.lid_ports
+                ],
+            },
             "drafting_assumptions": {
                 "axis_convention": "Z up",
                 "plenum_only_internal_void": True,
-                "dished_heads": "Aspect-ratio-preserving spherical-cap approximation",
+                "dished_heads": (
+                    "Offset elliptical head profiles with "
+                    "constant-thickness shell layers"
+                ),
             },
         }
 

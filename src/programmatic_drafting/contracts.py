@@ -8,6 +8,11 @@ def require_positive(name: str, value: float) -> None:
         raise ValueError(f"{name} must be positive, got {value!r}")
 
 
+def require_nonnegative(name: str, value: float) -> None:
+    if value < 0.0:
+        raise ValueError(f"{name} must be nonnegative, got {value!r}")
+
+
 def require_fraction(name: str, value: float) -> None:
     if value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be between 0.0 and 1.0, got {value!r}")
