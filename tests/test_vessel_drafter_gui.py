@@ -108,11 +108,34 @@ def test_window_exposes_three_d_preview_and_layer_controls() -> None:
     app.processEvents()
 
     assert window.three_d_canvas.current_face_count < full_face_count
+    assert window.three_d_canvas.view_state == pytest.approx((0.0, -45.0))
 
     window.layer_visibility_checkboxes["steel_shell"].setChecked(False)
     app.processEvents()
 
     assert "steel_shell" not in window.three_d_canvas.current_labels
+
+    window.close()
+    app.quit()
+
+
+def test_section_cut_angle_changes_reset_three_d_view_to_section_plane() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = VesselDrafterWindow()
+    window.show()
+    window.preview_tabs.setCurrentIndex(1)
+    app.processEvents()
+
+    window.section_cut_checkbox.setChecked(True)
+    window.section_cut_angle_spin.setValue(120.0)
+    app.processEvents()
+
+    assert window.three_d_canvas.view_state == pytest.approx((0.0, 30.0))
+
+    window.section_cut_angle_spin.setValue(270.0)
+    app.processEvents()
+
+    assert window.three_d_canvas.view_state == pytest.approx((0.0, -180.0))
 
     window.close()
     app.quit()

@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from programmatic_drafting.analysis.vessel_drafter_metrics import (
@@ -96,3 +97,20 @@ def test_three_d_scene_section_cut_reduces_preview_faces() -> None:
     )
 
     assert split_scene.bounds != full_scene.bounds
+
+
+def test_three_d_scene_split_adds_material_faces_on_section_plane() -> None:
+    split_scene = build_vessel_3d_scene(
+        DEFAULT_VESSEL_DRAFTER_LAYOUT,
+        view_options=Vessel3DViewOptions(
+            split_enabled=True,
+            split_angle_degrees=0.0,
+        ),
+    )
+    hot_face_mesh = next(
+        mesh for mesh in split_scene.meshes if mesh.label == "hot_face_refractory"
+    )
+
+    assert any(
+        np.all(np.abs(polygon[:, 1]) < 1e-6) for polygon in hot_face_mesh.polygons
+    )
