@@ -186,7 +186,9 @@ class VesselDrafterWindow(QMainWindow):
         for checkbox in self.layer_visibility_checkboxes.values():
             checkbox.toggled.connect(self.refresh_three_d_preview)
         self.section_cut_checkbox.toggled.connect(self._handle_section_cut_toggled)
-        self.section_cut_angle_spin.valueChanged.connect(self.refresh_three_d_preview)
+        self.section_cut_angle_spin.valueChanged.connect(
+            self._handle_section_cut_angle_changed
+        )
         self.preview_tabs.currentChanged.connect(self._handle_preview_tab_changed)
 
     def write_layout(self, layout: VesselDrafterLayout) -> None:
@@ -504,12 +506,14 @@ class VesselDrafterWindow(QMainWindow):
         return spin
 
     def _update_three_d_preview(self, layout: VesselDrafterLayout) -> None:
+        view_options = self._read_three_d_view_options()
         self.three_d_canvas.draw_scene(
             build_vessel_3d_scene(
                 layout,
                 visible_labels=self._visible_layer_labels(),
-                view_options=self._read_three_d_view_options(),
-            )
+                view_options=view_options,
+            ),
+            view_options,
         )
         self._three_d_preview_dirty = False
 
@@ -537,6 +541,12 @@ class VesselDrafterWindow(QMainWindow):
 
     def _handle_section_cut_toggled(self, checked: bool) -> None:
         self.section_cut_angle_spin.setEnabled(checked)
+        self.three_d_canvas.queue_default_view(self._read_three_d_view_options())
+        self.refresh_three_d_preview()
+
+    def _handle_section_cut_angle_changed(self, _: float) -> None:
+        if self.section_cut_checkbox.isChecked():
+            self.three_d_canvas.queue_default_view(self._read_three_d_view_options())
         self.refresh_three_d_preview()
 
 
