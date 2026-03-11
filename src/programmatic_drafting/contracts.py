@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from math import isfinite
+
 
 def require_positive(name: str, value: float) -> None:
     if value <= 0.0:
@@ -26,3 +28,8 @@ def require_integer_at_least(name: str, value: int, minimum: int) -> None:
 def require_less_or_equal(name: str, value: float, maximum: float) -> None:
     if value > maximum:
         raise ValueError(f"{name} must be <= {maximum}, got {value!r}")
+
+
+def require_finite(name: str, value: float) -> None:
+    if not isfinite(value):
+        raise ValueError(f"{name} must be finite, got {value!r}")

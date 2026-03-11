@@ -38,9 +38,10 @@ electrode advisor layout from the web tool plus standalone drafting studies.
   - Colors: orange glass, reddish-orange hot face, tan IFB, white duraboard, grey steel
   - Ports: multiple sidewall and lid ports with editable clocking, size, and placement
   - GUI: PyQt6 vessel editor with live 2D previews, a rotatable 3D tab, layer
-    visibility toggles, and STEP export
-  - Reporting: computed material volumes, masses, densities, conductivity, and
-    thermal expansion metadata in the GUI and JSON manifest
+    visibility toggles, a vertical section cut, and STEP export
+  - Reporting: computed material volumes in `ft^3`, surface areas in `ft^2`,
+    masses, densities, conductivity, and thermal expansion metadata in the GUI
+    and JSON manifest
 
 Generated artifacts:
 

@@ -20,20 +20,22 @@ class VesselDrafterThreeDCanvas(FigureCanvasQTAgg):
         self._scene: Vessel3DScene | None = None
         self._view_state = DEFAULT_VIEW
         self.current_labels: tuple[str, ...] = ()
+        self.current_face_count = 0
 
     def draw_scene(self, scene: Vessel3DScene) -> None:
         self._capture_view_state()
         self._scene = scene
         self.current_labels = tuple(mesh.label for mesh in scene.meshes)
+        self.current_face_count = sum(len(mesh.faces) for mesh in scene.meshes)
         self.figure.clear()
         axes = self.figure.add_subplot(111, projection="3d")
         for mesh in scene.meshes:
             axes.add_collection3d(
                 Poly3DCollection(
-                    mesh.triangles,
+                    mesh.polygons,
                     facecolors=mesh.color_hex,
-                    edgecolors="#202020",
-                    linewidths=0.15,
+                    edgecolors="none",
+                    linewidths=0.0,
                     alpha=mesh.alpha,
                 )
             )
@@ -60,9 +62,7 @@ class VesselDrafterThreeDCanvas(FigureCanvasQTAgg):
         axes.set_ylim(*_expand_limits(min_y, max_y, span_y))
         axes.set_zlim(*_expand_limits(min_z, max_z, span_z))
         axes.set_box_aspect((span_x, span_y, span_z))
-        axes.set_xlabel("X (in)")
-        axes.set_ylabel("Y (in)")
-        axes.set_zlabel("Z (in)")
+        axes.set_axis_off()
         axes.view_init(elev=self._view_state[0], azim=self._view_state[1])
 
 
