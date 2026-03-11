@@ -78,6 +78,8 @@
         "display_name": "Glass Bath",
         "category": "glass",
         "volume_in3": 27488.935718910692,
+        "volume_ft3": 15.90794891140665,
+        "surface_area_ft2": 42.54240051736178,
         "density_lb_per_ft3": 156.0,
         "mass_lb": 2481.6400301794374,
         "thermal_conductivity_w_per_mk": 1.1,
@@ -87,6 +89,8 @@
         "display_name": "Hot Face Refractory",
         "category": "refractory",
         "volume_in3": 88988.78116854577,
+        "volume_ft3": 51.49813725031584,
+        "surface_area_ft2": 164.01330220148813,
         "density_lb_per_ft3": 165.0,
         "mass_lb": 8497.192646302114,
         "thermal_conductivity_w_per_mk": 1.6,
@@ -96,6 +100,8 @@
         "display_name": "IFB",
         "category": "refractory",
         "volume_in3": 74572.77393760835,
+        "volume_ft3": 43.15554047315298,
+        "surface_area_ft2": 230.7873914656143,
         "density_lb_per_ft3": 52.0,
         "mass_lb": 2244.088104603955,
         "thermal_conductivity_w_per_mk": 0.25,
@@ -105,6 +111,8 @@
         "display_name": "Duraboard",
         "category": "refractory",
         "volume_in3": 19176.148188844018,
+        "volume_ft3": 11.097307979655103,
+        "surface_area_ft2": 266.40874834654153,
         "density_lb_per_ft3": 18.0,
         "mass_lb": 199.75154363379184,
         "thermal_conductivity_w_per_mk": 0.08,
@@ -114,6 +122,8 @@
         "display_name": "Steel Shell",
         "category": "shell",
         "volume_in3": 9962.059564488354,
+        "volume_ft3": 5.765080766486316,
+        "surface_area_ft2": 276.7779477759409,
         "density_lb_per_ft3": 490.0,
         "mass_lb": 2824.889575578295,
         "thermal_conductivity_w_per_mk": 45.0,
@@ -121,6 +131,8 @@
       }
     },
     "refractory_total_volume_in3": 182737.70329499815,
+    "refractory_total_volume_ft3": 105.75098570312393,
+    "refractory_total_surface_area_ft2": 661.209442013644,
     "refractory_total_mass_lb": 10941.032294539862
   }
 }

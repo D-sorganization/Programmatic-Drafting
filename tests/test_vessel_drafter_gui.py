@@ -95,11 +95,19 @@ def test_window_exposes_three_d_preview_and_layer_controls() -> None:
     assert window.preview_tabs.tabText(1) == "3D Preview"
     assert "steel_shell" in window.layer_visibility_checkboxes
     assert window.material_summary_table.rowCount() >= 5
+    assert not window.section_cut_checkbox.isChecked()
 
     window.preview_tabs.setCurrentIndex(1)
     app.processEvents()
 
     assert "steel_shell" in window.three_d_canvas.current_labels
+    full_face_count = window.three_d_canvas.current_face_count
+
+    window.section_cut_checkbox.setChecked(True)
+    window.section_cut_angle_spin.setValue(45.0)
+    app.processEvents()
+
+    assert window.three_d_canvas.current_face_count < full_face_count
 
     window.layer_visibility_checkboxes["steel_shell"].setChecked(False)
     app.processEvents()

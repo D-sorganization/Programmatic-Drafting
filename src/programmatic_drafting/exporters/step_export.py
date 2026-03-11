@@ -90,6 +90,8 @@ def export_vessel_drafter_step(
                     "display_name": item.display_name,
                     "category": item.category,
                     "volume_in3": item.volume_in3,
+                    "volume_ft3": item.volume_ft3,
+                    "surface_area_ft2": item.surface_area_ft2,
                     "density_lb_per_ft3": item.density_lb_per_ft3,
                     "mass_lb": item.mass_lb,
                     "thermal_conductivity_w_per_mk": (
@@ -100,6 +102,10 @@ def export_vessel_drafter_step(
                 for item in metrics.component_metrics
             },
             "refractory_total_volume_in3": metrics.refractory_total_volume_in3,
+            "refractory_total_volume_ft3": metrics.refractory_total_volume_ft3,
+            "refractory_total_surface_area_ft2": (
+                metrics.refractory_total_surface_area_ft2
+            ),
             "refractory_total_mass_lb": metrics.refractory_total_mass_lb,
         }
         manifest_path.write_text(

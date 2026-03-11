@@ -10,11 +10,12 @@ from programmatic_drafting.analysis.vessel_drafter_metrics import MaterialMetric
 
 class MaterialSummaryTable(QTableWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(0, 6, parent)
+        super().__init__(0, 7, parent)
         self.setHorizontalHeaderLabels(
             [
                 "Material",
-                "Volume (in^3)",
+                "Volume (ft^3)",
+                "Area (ft^2)",
                 "Density (lb/ft^3)",
                 "Mass (lb)",
                 "k (W/m-K)",
@@ -31,7 +32,8 @@ class MaterialSummaryTable(QTableWidget):
             self._append_row(
                 (
                     metric.display_name,
-                    f"{metric.volume_in3:.1f}",
+                    f"{metric.volume_ft3:.2f}",
+                    f"{metric.surface_area_ft2:.2f}",
                     f"{metric.density_lb_per_ft3:.1f}",
                     f"{metric.mass_lb:.1f}",
                     f"{metric.thermal_conductivity_w_per_mk:.2f}",
@@ -41,7 +43,8 @@ class MaterialSummaryTable(QTableWidget):
         self._append_row(
             (
                 "Total Refractory",
-                f"{report.refractory_total_volume_in3:.1f}",
+                f"{report.refractory_total_volume_ft3:.2f}",
+                f"{report.refractory_total_surface_area_ft2:.2f}",
                 "",
                 f"{report.refractory_total_mass_lb:.1f}",
                 "",
@@ -49,7 +52,10 @@ class MaterialSummaryTable(QTableWidget):
             )
         )
 
-    def _append_row(self, values: tuple[str, str, str, str, str, str]) -> None:
+    def _append_row(
+        self,
+        values: tuple[str, str, str, str, str, str, str],
+    ) -> None:
         row_index = self.rowCount()
         self.insertRow(row_index)
         for column_index, value in enumerate(values):

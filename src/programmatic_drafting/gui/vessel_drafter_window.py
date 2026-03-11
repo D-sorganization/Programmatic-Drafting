@@ -8,6 +8,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QGraphicsScene,
@@ -52,6 +53,9 @@ from programmatic_drafting.preview.vessel_drafter_preview import (
     build_plan_preview,
 )
 from programmatic_drafting.preview.vessel_drafter_scene import build_vessel_3d_scene
+from programmatic_drafting.preview.vessel_drafter_view_options import (
+    Vessel3DViewOptions,
+)
 
 
 class VesselDrafterWindow(QMainWindow):
@@ -96,6 +100,8 @@ class VesselDrafterWindow(QMainWindow):
         self.three_d_canvas = VesselDrafterThreeDCanvas()
         self.material_summary_table = MaterialSummaryTable(self)
         self.layer_visibility_checkboxes = self._build_layer_visibility_checkboxes()
+        self.section_cut_checkbox = QCheckBox("Split on vertical plane")
+        self.section_cut_angle_spin = self._build_section_cut_angle_spin()
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
 
@@ -179,6 +185,8 @@ class VesselDrafterWindow(QMainWindow):
         self.lid_port_panel.table.itemChanged.connect(self.update_preview)
         for checkbox in self.layer_visibility_checkboxes.values():
             checkbox.toggled.connect(self.refresh_three_d_preview)
+        self.section_cut_checkbox.toggled.connect(self._handle_section_cut_toggled)
+        self.section_cut_angle_spin.valueChanged.connect(self.refresh_three_d_preview)
         self.preview_tabs.currentChanged.connect(self._handle_preview_tab_changed)
 
     def write_layout(self, layout: VesselDrafterLayout) -> None:
@@ -297,7 +305,9 @@ class VesselDrafterWindow(QMainWindow):
             f"Outer diameter: {layout.outer_diameter_in:.2f} in | "
             f"Full height: {layout.full_height_in:.2f} in | "
             f"Ports: {len(layout.side_ports)} side, {len(layout.lid_ports)} lid | "
-            f"Refractory mass: {metrics.refractory_total_mass_lb:.1f} lb"
+            f"Refractory: {metrics.refractory_total_volume_ft3:.2f} ft^3, "
+            f"{metrics.refractory_total_surface_area_ft2:.2f} ft^2, "
+            f"{metrics.refractory_total_mass_lb:.1f} lb"
         )
 
     def refresh_three_d_preview(self) -> None:
@@ -447,6 +457,7 @@ class VesselDrafterWindow(QMainWindow):
         layout.addWidget(instructions)
         layout.addWidget(reset_view_button)
         layout.addWidget(self._build_layer_visibility_panel())
+        layout.addWidget(self._build_section_cut_panel())
         layout.addWidget(QLabel("Material Summary"))
         layout.addWidget(self.material_summary_table)
         layout.addStretch(1)
@@ -460,6 +471,13 @@ class VesselDrafterWindow(QMainWindow):
         for checkbox in self.layer_visibility_checkboxes.values():
             layout.addWidget(checkbox)
         layout.addStretch(1)
+        return panel
+
+    def _build_section_cut_panel(self) -> QWidget:
+        panel = QWidget()
+        layout = QFormLayout(panel)
+        layout.addRow(self.section_cut_checkbox)
+        layout.addRow("Split angle (deg)", self.section_cut_angle_spin)
         return panel
 
     def _build_layer_visibility_checkboxes(self) -> dict[str, QCheckBox]:
@@ -479,11 +497,18 @@ class VesselDrafterWindow(QMainWindow):
             checkboxes[label] = checkbox
         return checkboxes
 
+    def _build_section_cut_angle_spin(self) -> QDoubleSpinBox:
+        spin = make_double_spin(0.0, 0.0, 360.0)
+        spin.setSingleStep(15.0)
+        spin.setEnabled(False)
+        return spin
+
     def _update_three_d_preview(self, layout: VesselDrafterLayout) -> None:
         self.three_d_canvas.draw_scene(
             build_vessel_3d_scene(
                 layout,
                 visible_labels=self._visible_layer_labels(),
+                view_options=self._read_three_d_view_options(),
             )
         )
         self._three_d_preview_dirty = False
@@ -495,6 +520,12 @@ class VesselDrafterWindow(QMainWindow):
             if checkbox.isChecked()
         }
 
+    def _read_three_d_view_options(self) -> Vessel3DViewOptions:
+        return Vessel3DViewOptions(
+            split_enabled=self.section_cut_checkbox.isChecked(),
+            split_angle_degrees=self.section_cut_angle_spin.value(),
+        )
+
     def _handle_preview_tab_changed(self, index: int) -> None:
         if index != self.preview_tabs.indexOf(self.preview_tabs.widget(1)):
             return
@@ -503,6 +534,10 @@ class VesselDrafterWindow(QMainWindow):
     def _refresh_three_d_preview_if_visible(self, layout: VesselDrafterLayout) -> None:
         if self._three_d_preview_dirty and self.preview_tabs.currentIndex() == 1:
             self._update_three_d_preview(layout)
+
+    def _handle_section_cut_toggled(self, checked: bool) -> None:
+        self.section_cut_angle_spin.setEnabled(checked)
+        self.refresh_three_d_preview()
 
 
 def launch() -> int:
