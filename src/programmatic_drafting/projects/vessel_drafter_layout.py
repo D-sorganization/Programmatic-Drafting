@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from math import cos, sin
+from typing import Any
 
 from build123d import (
     Axis,
@@ -32,6 +34,20 @@ from programmatic_drafting.projects.vessel_drafter_profiles import (
     build_shell_band_profiles,
     build_shell_boundary_half,
 )
+
+
+@dataclass(frozen=True)
+class VesselComponent:
+    label: str
+    group_label: str
+    display_name: str
+    color_hex: str
+    category: str
+    density_lb_per_ft3: float
+    thermal_conductivity_w_per_mk: float
+    thermal_expansion_um_per_m_c: float
+    preview_alpha: float
+    shape: Any
 
 
 def _color_from_hex(color_hex: str) -> Color:
@@ -186,26 +202,84 @@ def _cut_ports(shape, cutters: tuple[Solid, ...]):
     return shape.cut(*cutters)
 
 
+def build_vessel_drafter_components(
+    layout: VesselDrafterLayout = DEFAULT_VESSEL_DRAFTER_LAYOUT,
+) -> tuple[VesselComponent, ...]:
+    cutters = _port_cutters(layout)
+    materials = layout.material_properties_by_name
+    components: list[VesselComponent] = [
+        VesselComponent(
+            label="glass_bath",
+            group_label="glass_bath",
+            display_name=materials["glass_bath"].display_name,
+            color_hex=materials["glass_bath"].color_hex,
+            category=materials["glass_bath"].category,
+            density_lb_per_ft3=materials["glass_bath"].density_lb_per_ft3,
+            thermal_conductivity_w_per_mk=(
+                materials["glass_bath"].thermal_conductivity_w_per_mk
+            ),
+            thermal_expansion_um_per_m_c=(
+                materials["glass_bath"].thermal_expansion_um_per_m_c
+            ),
+            preview_alpha=materials["glass_bath"].preview_alpha,
+            shape=_apply_style(
+                _cut_ports(_build_glass_bath(layout), cutters),
+                "glass_bath",
+                materials["glass_bath"].color_hex,
+            ),
+        )
+    ]
+    for shape, band in zip(
+        _build_shell_band_shapes(layout),
+        layout.shell_bands,
+        strict=True,
+    ):
+        properties = materials[band.label]
+        components.append(
+            VesselComponent(
+                label=band.label,
+                group_label=band.label,
+                display_name=properties.display_name,
+                color_hex=band.color_hex,
+                category=properties.category,
+                density_lb_per_ft3=properties.density_lb_per_ft3,
+                thermal_conductivity_w_per_mk=properties.thermal_conductivity_w_per_mk,
+                thermal_expansion_um_per_m_c=(properties.thermal_expansion_um_per_m_c),
+                preview_alpha=properties.preview_alpha,
+                shape=_apply_style(
+                    _cut_ports(shape, cutters), band.label, band.color_hex
+                ),
+            )
+        )
+    electrode_properties = materials["electrodes"]
+    for item in layout.electrode_placements:
+        components.append(
+            VesselComponent(
+                label=f"electrode_{item.index}",
+                group_label="electrodes",
+                display_name=electrode_properties.display_name,
+                color_hex=electrode_properties.color_hex,
+                category=electrode_properties.category,
+                density_lb_per_ft3=electrode_properties.density_lb_per_ft3,
+                thermal_conductivity_w_per_mk=(
+                    electrode_properties.thermal_conductivity_w_per_mk
+                ),
+                thermal_expansion_um_per_m_c=(
+                    electrode_properties.thermal_expansion_um_per_m_c
+                ),
+                preview_alpha=electrode_properties.preview_alpha,
+                shape=_build_electrode(item, layout),
+            )
+        )
+    return tuple(components)
+
+
 def build_vessel_drafter_shape(
     layout: VesselDrafterLayout = DEFAULT_VESSEL_DRAFTER_LAYOUT,
 ) -> Compound:
-    cutters = _port_cutters(layout)
-    children = [
-        _apply_style(
-            _cut_ports(_build_glass_bath(layout), cutters),
-            "glass_bath",
-            layout.layers[0].color_hex,
-        ),
-        *(
-            _apply_style(_cut_ports(shape, cutters), band.label, band.color_hex)
-            for shape, band in zip(
-                _build_shell_band_shapes(layout),
-                layout.shell_bands,
-                strict=True,
-            )
-        ),
-    ]
-    children.extend(
-        _build_electrode(item, layout) for item in layout.electrode_placements
+    return Compound(
+        label="vessel_drafter_default",
+        children=[
+            component.shape for component in build_vessel_drafter_components(layout)
+        ],
     )
-    return Compound(label="vessel_drafter_default", children=children)

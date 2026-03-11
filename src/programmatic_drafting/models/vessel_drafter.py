@@ -13,15 +13,50 @@ from programmatic_drafting.contracts import (
     require_nonnegative,
     require_positive,
 )
+from programmatic_drafting.models.vessel_materials import (
+    DEFAULT_VESSEL_MATERIALS_BY_NAME,
+    MaterialProperties,
+)
 
 MM_PER_INCH = 25.4
 
 
 @dataclass(frozen=True)
 class MaterialLayer:
-    name: str
+    properties: MaterialProperties
     thickness_in: float
-    color_hex: str
+
+    @property
+    def name(self) -> str:
+        return self.properties.name
+
+    @property
+    def display_name(self) -> str:
+        return self.properties.display_name
+
+    @property
+    def color_hex(self) -> str:
+        return self.properties.color_hex
+
+    @property
+    def category(self) -> str:
+        return self.properties.category
+
+    @property
+    def density_lb_per_ft3(self) -> float:
+        return self.properties.density_lb_per_ft3
+
+    @property
+    def thermal_conductivity_w_per_mk(self) -> float:
+        return self.properties.thermal_conductivity_w_per_mk
+
+    @property
+    def thermal_expansion_um_per_m_c(self) -> float:
+        return self.properties.thermal_expansion_um_per_m_c
+
+    @property
+    def preview_alpha(self) -> float:
+        return self.properties.preview_alpha
 
 
 @dataclass(frozen=True)
@@ -231,13 +266,18 @@ class VesselDrafterLayout:
 
     @property
     def layers(self) -> tuple[MaterialLayer, ...]:
+        materials = self.material_properties_by_name
         return (
-            MaterialLayer("glass_bath", self.inner_radius_in, "#F28C28"),
-            MaterialLayer("hot_face_refractory", self.hot_face_thickness_in, "#D95F02"),
-            MaterialLayer("ifb", self.ifb_thickness_in, "#C7A46A"),
-            MaterialLayer("duraboard", self.duraboard_thickness_in, "#F5F5F0"),
-            MaterialLayer("steel_shell", self.steel_thickness_in, "#8A8F98"),
+            MaterialLayer(materials["glass_bath"], self.inner_radius_in),
+            MaterialLayer(materials["hot_face_refractory"], self.hot_face_thickness_in),
+            MaterialLayer(materials["ifb"], self.ifb_thickness_in),
+            MaterialLayer(materials["duraboard"], self.duraboard_thickness_in),
+            MaterialLayer(materials["steel_shell"], self.steel_thickness_in),
         )
+
+    @property
+    def material_properties_by_name(self) -> dict[str, MaterialProperties]:
+        return dict(DEFAULT_VESSEL_MATERIALS_BY_NAME)
 
     @property
     def shell_bands(self) -> tuple[RadialBand, ...]:
@@ -327,13 +367,29 @@ class VesselDrafterLayout:
             "materials": {
                 layer.name: {
                     "thickness_in": layer.thickness_in,
+                    "display_name": layer.display_name,
                     "color_hex": layer.color_hex,
+                    "density_lb_per_ft3": layer.density_lb_per_ft3,
+                    "thermal_conductivity_w_per_mk": (
+                        layer.thermal_conductivity_w_per_mk
+                    ),
+                    "thermal_expansion_um_per_m_c": (
+                        layer.thermal_expansion_um_per_m_c
+                    ),
                 }
                 for layer in self.layers[1:]
             },
             "glass_bath": {
+                "display_name": self.layers[0].display_name,
                 "color_hex": self.layers[0].color_hex,
                 "height_in": self.glass_depth_in,
+                "density_lb_per_ft3": self.layers[0].density_lb_per_ft3,
+                "thermal_conductivity_w_per_mk": (
+                    self.layers[0].thermal_conductivity_w_per_mk
+                ),
+                "thermal_expansion_um_per_m_c": (
+                    self.layers[0].thermal_expansion_um_per_m_c
+                ),
             },
             "electrodes": {
                 "count": self.electrode_count,

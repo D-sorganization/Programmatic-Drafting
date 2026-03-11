@@ -37,4 +37,7 @@ an interactive PyQt6 drafting tool.
 - Live cross-section preview for shell stackup, plenum, and projected port
   heights.
 - Live top-view preview for radial electrode placement and port placement.
+- Separate 3D preview tab with mouse rotation and per-layer visibility toggles.
+- Material summary table with computed component volumes, refractory mass totals,
+  and default density and thermal-property assumptions.
 - STEP + JSON export from the current form state.

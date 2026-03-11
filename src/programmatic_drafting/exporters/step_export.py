@@ -7,6 +7,9 @@ from pathlib import Path
 
 from build123d import export_step
 
+from programmatic_drafting.analysis.vessel_drafter_metrics import (
+    build_material_metrics_report,
+)
 from programmatic_drafting.models.cylindrical_bath import (
     DEFAULT_CYLINDRICAL_BATH_LAYOUT,
     CylindricalBathLayout,
@@ -79,8 +82,28 @@ def export_vessel_drafter_step(
 
     if manifest_path is not None:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        metrics = build_material_metrics_report(layout)
+        manifest = layout.to_manifest()
+        manifest["computed_metrics"] = {
+            "components": {
+                item.label: {
+                    "display_name": item.display_name,
+                    "category": item.category,
+                    "volume_in3": item.volume_in3,
+                    "density_lb_per_ft3": item.density_lb_per_ft3,
+                    "mass_lb": item.mass_lb,
+                    "thermal_conductivity_w_per_mk": (
+                        item.thermal_conductivity_w_per_mk
+                    ),
+                    "thermal_expansion_um_per_m_c": (item.thermal_expansion_um_per_m_c),
+                }
+                for item in metrics.component_metrics
+            },
+            "refractory_total_volume_in3": metrics.refractory_total_volume_in3,
+            "refractory_total_mass_lb": metrics.refractory_total_mass_lb,
+        }
         manifest_path.write_text(
-            json.dumps(layout.to_manifest(), indent=2) + "\n",
+            json.dumps(manifest, indent=2) + "\n",
             encoding="utf-8",
         )
 
