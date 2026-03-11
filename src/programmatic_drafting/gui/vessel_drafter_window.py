@@ -7,6 +7,7 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QFileDialog,
     QFormLayout,
     QGraphicsScene,
@@ -16,11 +17,16 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
+from programmatic_drafting.analysis.vessel_drafter_metrics import (
+    build_material_metrics_report,
+)
 from programmatic_drafting.exporters.step_export import export_vessel_drafter_step
+from programmatic_drafting.gui.material_summary_table import MaterialSummaryTable
 from programmatic_drafting.gui.vessel_drafter_port_panel import (
     PortFieldSpec,
     PortTableSection,
@@ -30,6 +36,9 @@ from programmatic_drafting.gui.vessel_drafter_port_panel import (
 from programmatic_drafting.gui.vessel_drafter_rendering import (
     render_cross_section,
     render_plan,
+)
+from programmatic_drafting.gui.vessel_drafter_three_d_canvas import (
+    VesselDrafterThreeDCanvas,
 )
 from programmatic_drafting.gui.zoomable_graphics_view import ZoomableGraphicsView
 from programmatic_drafting.models.vessel_drafter import (
@@ -42,6 +51,7 @@ from programmatic_drafting.preview.vessel_drafter_preview import (
     build_cross_section_preview,
     build_plan_preview,
 )
+from programmatic_drafting.preview.vessel_drafter_scene import build_vessel_3d_scene
 
 
 class VesselDrafterWindow(QMainWindow):
@@ -50,6 +60,7 @@ class VesselDrafterWindow(QMainWindow):
         self.setWindowTitle("Vessel Drafter")
         self.resize(1400, 880)
         self._suppress_preview_updates = False
+        self._three_d_preview_dirty = True
 
         self.inner_diameter_spin = make_double_spin(50.0, 1.0, 500.0)
         self.glass_depth_spin = make_double_spin(14.0, 1.0, 250.0)
@@ -81,6 +92,10 @@ class VesselDrafterWindow(QMainWindow):
         self.plan_scene = QGraphicsScene(self)
         self.plan_view = ZoomableGraphicsView(self)
         self.plan_view.setScene(self.plan_scene)
+        self.preview_tabs = QTabWidget(self)
+        self.three_d_canvas = VesselDrafterThreeDCanvas()
+        self.material_summary_table = MaterialSummaryTable(self)
+        self.layer_visibility_checkboxes = self._build_layer_visibility_checkboxes()
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
 
@@ -128,14 +143,7 @@ class VesselDrafterWindow(QMainWindow):
         controls_scroll.setMinimumWidth(340)
 
         preview_layout = QVBoxLayout()
-        preview_layout.addWidget(
-            self._build_preview_panel("Cross-Section Preview", self.cross_section_view),
-            1,
-        )
-        preview_layout.addWidget(
-            self._build_preview_panel("Top View Preview", self.plan_view),
-            1,
-        )
+        preview_layout.addWidget(self._build_preview_tabs(), 1)
 
         main_layout = QHBoxLayout(root)
         main_layout.addWidget(controls_scroll, 0)
@@ -169,6 +177,9 @@ class VesselDrafterWindow(QMainWindow):
         )
         self.side_port_panel.table.itemChanged.connect(self.update_preview)
         self.lid_port_panel.table.itemChanged.connect(self.update_preview)
+        for checkbox in self.layer_visibility_checkboxes.values():
+            checkbox.toggled.connect(self.refresh_three_d_preview)
+        self.preview_tabs.currentChanged.connect(self._handle_preview_tab_changed)
 
     def write_layout(self, layout: VesselDrafterLayout) -> None:
         self._suppress_preview_updates = True
@@ -276,13 +287,29 @@ class VesselDrafterWindow(QMainWindow):
             build_cross_section_preview(layout),
         )
         render_plan(self.plan_scene, build_plan_preview(layout))
+        self._three_d_preview_dirty = True
+        self._refresh_three_d_preview_if_visible(layout)
+        metrics = build_material_metrics_report(layout)
+        self.material_summary_table.set_report(metrics)
         self.cross_section_view.sync_to_scene()
         self.plan_view.sync_to_scene()
         self.status_label.setText(
             f"Outer diameter: {layout.outer_diameter_in:.2f} in | "
             f"Full height: {layout.full_height_in:.2f} in | "
-            f"Ports: {len(layout.side_ports)} side, {len(layout.lid_ports)} lid"
+            f"Ports: {len(layout.side_ports)} side, {len(layout.lid_ports)} lid | "
+            f"Refractory mass: {metrics.refractory_total_mass_lb:.1f} lb"
         )
+
+    def refresh_three_d_preview(self) -> None:
+        if self._suppress_preview_updates:
+            return
+        try:
+            layout = self.read_layout()
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
+            return
+        self._three_d_preview_dirty = True
+        self._refresh_three_d_preview_if_visible(layout)
 
     def export_step_dialog(self) -> None:
         try:
@@ -385,6 +412,97 @@ class VesselDrafterWindow(QMainWindow):
         panel_layout.addLayout(header_layout)
         panel_layout.addWidget(view, 1)
         return panel
+
+    def _build_preview_tabs(self) -> QTabWidget:
+        previews_tab = QWidget()
+        previews_layout = QVBoxLayout(previews_tab)
+        previews_layout.addWidget(
+            self._build_preview_panel("Cross-Section Preview", self.cross_section_view),
+            1,
+        )
+        previews_layout.addWidget(
+            self._build_preview_panel("Top View Preview", self.plan_view),
+            1,
+        )
+
+        three_d_tab = QWidget()
+        three_d_layout = QHBoxLayout(three_d_tab)
+        three_d_layout.addWidget(self.three_d_canvas, 1)
+        three_d_layout.addWidget(self._build_three_d_sidebar(), 0)
+
+        self.preview_tabs.addTab(previews_tab, "2D Previews")
+        self.preview_tabs.addTab(three_d_tab, "3D Preview")
+        return self.preview_tabs
+
+    def _build_three_d_sidebar(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        instructions = QLabel(
+            "Drag to rotate the model. Use the checkboxes to hide layers."
+        )
+        instructions.setWordWrap(True)
+        reset_view_button = QPushButton("Reset 3D View")
+        reset_view_button.clicked.connect(self.three_d_canvas.reset_view)
+
+        layout.addWidget(instructions)
+        layout.addWidget(reset_view_button)
+        layout.addWidget(self._build_layer_visibility_panel())
+        layout.addWidget(QLabel("Material Summary"))
+        layout.addWidget(self.material_summary_table)
+        layout.addStretch(1)
+        panel.setMinimumWidth(360)
+        return panel
+
+    def _build_layer_visibility_panel(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        layout.addWidget(QLabel("Visible Layers"))
+        for checkbox in self.layer_visibility_checkboxes.values():
+            layout.addWidget(checkbox)
+        layout.addStretch(1)
+        return panel
+
+    def _build_layer_visibility_checkboxes(self) -> dict[str, QCheckBox]:
+        materials = DEFAULT_VESSEL_DRAFTER_LAYOUT.material_properties_by_name
+        labels = (
+            "glass_bath",
+            "hot_face_refractory",
+            "ifb",
+            "duraboard",
+            "steel_shell",
+            "electrodes",
+        )
+        checkboxes: dict[str, QCheckBox] = {}
+        for label in labels:
+            checkbox = QCheckBox(materials[label].display_name)
+            checkbox.setChecked(True)
+            checkboxes[label] = checkbox
+        return checkboxes
+
+    def _update_three_d_preview(self, layout: VesselDrafterLayout) -> None:
+        self.three_d_canvas.draw_scene(
+            build_vessel_3d_scene(
+                layout,
+                visible_labels=self._visible_layer_labels(),
+            )
+        )
+        self._three_d_preview_dirty = False
+
+    def _visible_layer_labels(self) -> set[str]:
+        return {
+            label
+            for label, checkbox in self.layer_visibility_checkboxes.items()
+            if checkbox.isChecked()
+        }
+
+    def _handle_preview_tab_changed(self, index: int) -> None:
+        if index != self.preview_tabs.indexOf(self.preview_tabs.widget(1)):
+            return
+        self.refresh_three_d_preview()
+
+    def _refresh_three_d_preview_if_visible(self, layout: VesselDrafterLayout) -> None:
+        if self._three_d_preview_dirty and self.preview_tabs.currentIndex() == 1:
+            self._update_three_d_preview(layout)
 
 
 def launch() -> int:

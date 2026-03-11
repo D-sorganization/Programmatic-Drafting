@@ -25,7 +25,10 @@ def test_export_creates_vessel_drafter_step_and_manifest(tmp_path) -> None:
     assert manifest["project"] == "vessel_drafter_default"
     assert manifest["vessel"]["inner_diameter_in"] == 50.0
     assert manifest["materials"]["steel_shell"]["thickness_in"] == 0.5
+    assert manifest["materials"]["steel_shell"]["density_lb_per_ft3"] > 0.0
+    assert manifest["materials"]["steel_shell"]["thermal_expansion_um_per_m_c"] > 0.0
     assert manifest["electrodes"]["count"] == 3
+    assert manifest["computed_metrics"]["refractory_total_mass_lb"] > 0.0
 
 
 def test_export_manifest_includes_port_configuration(tmp_path) -> None:

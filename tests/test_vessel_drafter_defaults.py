@@ -26,6 +26,16 @@ def test_defaults_match_requested_vessel_stackup() -> None:
     assert layout.outer_head_depth_in == pytest.approx(24.5)
     assert layout.side_ports == ()
     assert layout.lid_ports == ()
+    assert (
+        layout.material_properties_by_name["hot_face_refractory"].density_lb_per_ft3
+        > 0.0
+    )
+    assert (
+        layout.material_properties_by_name[
+            "hot_face_refractory"
+        ].thermal_expansion_um_per_m_c
+        > 0.0
+    )
 
 
 def test_port_inputs_round_trip_through_the_layout() -> None:

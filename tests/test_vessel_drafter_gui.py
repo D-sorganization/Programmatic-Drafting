@@ -82,3 +82,29 @@ def test_preview_zoom_controls_preserve_user_zoom_across_refresh() -> None:
 
     window.close()
     app.quit()
+
+
+def test_window_exposes_three_d_preview_and_layer_controls() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = VesselDrafterWindow()
+    window.show()
+    app.processEvents()
+
+    assert window.preview_tabs.count() == 2
+    assert window.preview_tabs.tabText(0) == "2D Previews"
+    assert window.preview_tabs.tabText(1) == "3D Preview"
+    assert "steel_shell" in window.layer_visibility_checkboxes
+    assert window.material_summary_table.rowCount() >= 5
+
+    window.preview_tabs.setCurrentIndex(1)
+    app.processEvents()
+
+    assert "steel_shell" in window.three_d_canvas.current_labels
+
+    window.layer_visibility_checkboxes["steel_shell"].setChecked(False)
+    app.processEvents()
+
+    assert "steel_shell" not in window.three_d_canvas.current_labels
+
+    window.close()
+    app.quit()
