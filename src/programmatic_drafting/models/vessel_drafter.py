@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from math import radians
 from typing import Any
 
+from programmatic_drafting.constants import MM_PER_INCH
 from programmatic_drafting.contracts import (
     require_fraction,
     require_integer_at_least,
@@ -17,8 +18,6 @@ from programmatic_drafting.models.vessel_materials import (
     DEFAULT_VESSEL_MATERIALS_BY_NAME,
     MaterialProperties,
 )
-
-MM_PER_INCH = 25.4
 
 
 @dataclass(frozen=True)

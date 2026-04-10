@@ -19,9 +19,9 @@ from build123d import (
     revolve,
 )
 
+from programmatic_drafting.constants import MM_PER_INCH
 from programmatic_drafting.models.vessel_drafter import (
     DEFAULT_VESSEL_DRAFTER_LAYOUT,
-    MM_PER_INCH,
     VesselDrafterLayout,
     VesselElectrodePlacement,
     VesselLidPort,
