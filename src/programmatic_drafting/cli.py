@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 
 from programmatic_drafting.exporters.step_export import (
@@ -10,6 +11,8 @@ from programmatic_drafting.exporters.step_export import (
     export_default_layout_step,
     export_vessel_drafter_default_step,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -77,7 +80,7 @@ def main() -> int:
             output_path=Path(args.output),
             manifest_path=Path(args.manifest),
         )
-        print(step_path)
+        logger.info("Exported electrode advisor STEP artifact to %s", step_path)
         return 0
 
     if args.command == "export-cylindrical-bath-layout":
@@ -85,7 +88,7 @@ def main() -> int:
             output_path=Path(args.output),
             manifest_path=Path(args.manifest),
         )
-        print(step_path)
+        logger.info("Exported cylindrical bath STEP artifact to %s", step_path)
         return 0
 
     if args.command == "export-vessel-drafter-default":
@@ -93,7 +96,7 @@ def main() -> int:
             output_path=Path(args.output),
             manifest_path=Path(args.manifest),
         )
-        print(step_path)
+        logger.info("Exported vessel drafter STEP artifact to %s", step_path)
         return 0
 
     if args.command == "launch-vessel-drafter-gui":
