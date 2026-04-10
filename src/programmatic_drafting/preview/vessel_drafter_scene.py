@@ -9,9 +9,9 @@ from typing import TypeAlias, cast
 
 import numpy as np
 
+from programmatic_drafting.constants import MM_PER_INCH
 from programmatic_drafting.models.vessel_drafter import (
     DEFAULT_VESSEL_DRAFTER_LAYOUT,
-    MM_PER_INCH,
     VesselDrafterLayout,
 )
 from programmatic_drafting.preview.vessel_drafter_view_options import (

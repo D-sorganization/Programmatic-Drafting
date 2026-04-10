@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from math import cos, radians, sin
 from typing import Any
 
-MM_PER_INCH = 25.4
+from programmatic_drafting.constants import MM_PER_INCH
 
 
 @dataclass(frozen=True)

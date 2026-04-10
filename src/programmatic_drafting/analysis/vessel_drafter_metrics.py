@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from programmatic_drafting.constants import MM_PER_INCH
 from programmatic_drafting.models.vessel_drafter import (
     DEFAULT_VESSEL_DRAFTER_LAYOUT,
-    MM_PER_INCH,
     VesselDrafterLayout,
 )
 from programmatic_drafting.projects.vessel_drafter_layout import (
