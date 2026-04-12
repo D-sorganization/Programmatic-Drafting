@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   regenerate-artifacts:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
