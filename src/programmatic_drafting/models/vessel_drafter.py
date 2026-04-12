@@ -14,6 +14,7 @@ from programmatic_drafting.contracts import (
     require_nonnegative,
     require_positive,
 )
+from programmatic_drafting.models.ports import PortMixin
 from programmatic_drafting.models.vessel_materials import (
     DEFAULT_VESSEL_MATERIALS_BY_NAME,
     MaterialProperties,
@@ -85,7 +86,7 @@ class VesselElectrodePlacement:
 
 
 @dataclass(frozen=True)
-class VesselSidePort:
+class VesselSidePort(PortMixin):
     clock_angle_degrees: float
     diameter_in: float
     height_above_glass_surface_in: float
@@ -97,24 +98,12 @@ class VesselSidePort:
             self.height_above_glass_surface_in,
         )
 
-    @property
-    def normalized_clock_angle_degrees(self) -> float:
-        return self.clock_angle_degrees % 360.0
-
-    @property
-    def normalized_clock_angle_radians(self) -> float:
-        return radians(self.normalized_clock_angle_degrees)
-
-    @property
-    def radius_in(self) -> float:
-        return self.diameter_in * 0.5
-
     def centerline_height_in(self, layout: VesselDrafterLayout) -> float:
         return layout.glass_depth_in + self.height_above_glass_surface_in
 
 
 @dataclass(frozen=True)
-class VesselLidPort:
+class VesselLidPort(PortMixin):
     clock_angle_degrees: float
     diameter_in: float
     radial_distance_from_center_in: float
@@ -125,18 +114,6 @@ class VesselLidPort:
             "radial_distance_from_center_in",
             self.radial_distance_from_center_in,
         )
-
-    @property
-    def normalized_clock_angle_degrees(self) -> float:
-        return self.clock_angle_degrees % 360.0
-
-    @property
-    def normalized_clock_angle_radians(self) -> float:
-        return radians(self.normalized_clock_angle_degrees)
-
-    @property
-    def radius_in(self) -> float:
-        return self.diameter_in * 0.5
 
 
 @dataclass(frozen=True)
