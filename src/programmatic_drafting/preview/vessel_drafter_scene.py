@@ -301,6 +301,25 @@ def _revolved_profile_mesh(
     view_options: Vessel3DViewOptions,
 ) -> tuple[FloatArray, IntArray]:
     angles = _preview_angles(view_options)
+    vertices, vertex_groups = _build_revolved_vertices(half_profile, angles)
+    face_parts = _build_revolved_faces(vertex_groups, view_options)
+    if view_options.split_enabled:
+        section_vertices, section_faces = _section_cap_mesh(
+            half_profile,
+            view_options,
+        )
+        if section_faces.size > 0:
+            section_faces = section_faces + len(vertices)
+            vertices = np.vstack((vertices, section_vertices))
+            face_parts.append(section_faces)
+    faces = np.vstack(face_parts)
+    return vertices, faces
+
+
+def _build_revolved_vertices(
+    half_profile: tuple[ProfilePoint, ...],
+    angles: FloatArray,
+) -> tuple[FloatArray, list[int | IntArray]]:
     angle_count = len(angles)
     cos_theta = np.cos(angles)
     sin_theta = np.sin(angles)
@@ -331,8 +350,14 @@ def _revolved_profile_mesh(
         vertex_parts.append(ring)
         vertex_count += angle_count
 
-    vertices = np.vstack(vertex_parts)
-    face_parts = []
+    return np.vstack(vertex_parts), vertex_groups
+
+
+def _build_revolved_faces(
+    vertex_groups: list[int | IntArray],
+    view_options: Vessel3DViewOptions,
+) -> list[IntArray]:
+    face_parts: list[IntArray] = []
     for start_group, end_group in _profile_segments(vertex_groups):
         segment_faces = _segment_faces(
             start_group,
@@ -341,17 +366,7 @@ def _revolved_profile_mesh(
         )
         if segment_faces.size > 0:
             face_parts.append(segment_faces)
-    if view_options.split_enabled:
-        section_vertices, section_faces = _section_cap_mesh(
-            half_profile,
-            view_options,
-        )
-        if section_faces.size > 0:
-            section_faces = section_faces + len(vertices)
-            vertices = np.vstack((vertices, section_vertices))
-            face_parts.append(section_faces)
-    faces = np.vstack(face_parts)
-    return vertices, faces
+    return face_parts
 
 
 def _profile_segments(
@@ -416,6 +431,22 @@ def _cylinder_mesh(
     end_point: FloatArray,
     radius_in: float,
 ) -> tuple[FloatArray, IntArray]:
+    radial_unit, binormal_unit = _cylinder_axis_frame(start_point, end_point)
+    vertices = _cylinder_vertices(
+        start_point,
+        end_point,
+        radius_in,
+        radial_unit,
+        binormal_unit,
+    )
+    faces = _cylinder_faces()
+    return vertices, faces
+
+
+def _cylinder_axis_frame(
+    start_point: FloatArray,
+    end_point: FloatArray,
+) -> tuple[FloatArray, FloatArray]:
     axis_vector = end_point - start_point
     axis_length = np.linalg.norm(axis_vector)
     axis_unit = axis_vector / axis_length
@@ -425,7 +456,16 @@ def _cylinder_mesh(
     radial_unit = np.cross(axis_unit, reference)
     radial_unit /= np.linalg.norm(radial_unit)
     binormal_unit = np.cross(axis_unit, radial_unit)
+    return radial_unit, binormal_unit
 
+
+def _cylinder_vertices(
+    start_point: FloatArray,
+    end_point: FloatArray,
+    radius_in: float,
+    radial_unit: FloatArray,
+    binormal_unit: FloatArray,
+) -> FloatArray:
     angles = np.linspace(
         0.0,
         2.0 * pi,
@@ -445,8 +485,10 @@ def _cylinder_mesh(
     ) * radius_in
     start_ring = start_point[np.newaxis, :] + radial_offsets
     end_ring = end_point[np.newaxis, :] + radial_offsets
-    vertices = np.vstack((start_ring, end_ring, start_point, end_point))
+    return np.vstack((start_ring, end_ring, start_point, end_point))
 
+
+def _cylinder_faces() -> IntArray:
     lower_indices = np.arange(DEFAULT_ELECTRODE_SEGMENTS, dtype=np.int32)
     upper_indices = lower_indices + DEFAULT_ELECTRODE_SEGMENTS
     start_center_index = np.int32(DEFAULT_ELECTRODE_SEGMENTS * 2)
@@ -477,7 +519,7 @@ def _cylinder_mesh(
             np.roll(upper_indices, -1),
         )
     )
-    return vertices, np.vstack((side_faces, start_cap, end_cap))
+    return np.vstack((side_faces, start_cap, end_cap))
 
 
 def _preview_angles(view_options: Vessel3DViewOptions) -> FloatArray:
