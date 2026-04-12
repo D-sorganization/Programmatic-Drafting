@@ -41,6 +41,16 @@ def render_cross_section(scene: QGraphicsScene, preview: CrossSectionPreview) ->
             PREVIEW_MARGIN + ((top_z_in - point.z_in) * PREVIEW_SCALE),
         )
 
+    _render_bands_and_plenum(scene, preview, map_point)
+    _render_axial_electrodes(scene, preview, center_x, top_z_in)
+    _render_projected_side_ports(scene, preview, center_x, top_z_in)
+
+
+def _render_bands_and_plenum(
+    scene: QGraphicsScene,
+    preview: CrossSectionPreview,
+    map_point,
+) -> None:
     for z_value, polygon in enumerate(preview.band_polygons, start=1):
         _add_band_polygon(scene, polygon, map_point, float(z_value))
 
@@ -55,6 +65,13 @@ def render_cross_section(scene: QGraphicsScene, preview: CrossSectionPreview) ->
     plenum_item.setZValue(10.0)
     scene.addItem(plenum_item)
 
+
+def _render_axial_electrodes(
+    scene: QGraphicsScene,
+    preview: CrossSectionPreview,
+    center_x: float,
+    top_z_in: float,
+) -> None:
     for feature in preview.axial_electrodes:
         radius_px = feature.diameter_in * 0.5 * PREVIEW_SCALE
         y = PREVIEW_MARGIN + ((top_z_in - feature.centerline_height_in) * PREVIEW_SCALE)
@@ -70,6 +87,13 @@ def render_cross_section(scene: QGraphicsScene, preview: CrossSectionPreview) ->
         )
         _add_path(scene, path, feature.color_hex, 20.0)
 
+
+def _render_projected_side_ports(
+    scene: QGraphicsScene,
+    preview: CrossSectionPreview,
+    center_x: float,
+    top_z_in: float,
+) -> None:
     for port in preview.projected_side_ports:
         center_y = PREVIEW_MARGIN + (
             (top_z_in - port.centerline_height_in) * PREVIEW_SCALE
