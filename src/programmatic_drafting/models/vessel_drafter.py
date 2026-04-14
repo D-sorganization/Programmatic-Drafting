@@ -8,6 +8,7 @@ from typing import Any
 
 from programmatic_drafting.constants import MM_PER_INCH
 from programmatic_drafting.contracts import (
+    require_finite,
     require_fraction,
     require_integer_at_least,
     require_less_or_equal,
@@ -92,6 +93,7 @@ class VesselSidePort(PortMixin):
     height_above_glass_surface_in: float
 
     def __post_init__(self) -> None:
+        require_finite("clock_angle_degrees", self.clock_angle_degrees)
         require_positive("diameter_in", self.diameter_in)
         require_nonnegative(
             "height_above_glass_surface_in",
@@ -109,6 +111,7 @@ class VesselLidPort(PortMixin):
     radial_distance_from_center_in: float
 
     def __post_init__(self) -> None:
+        require_finite("clock_angle_degrees", self.clock_angle_degrees)
         require_positive("diameter_in", self.diameter_in)
         require_nonnegative(
             "radial_distance_from_center_in",
