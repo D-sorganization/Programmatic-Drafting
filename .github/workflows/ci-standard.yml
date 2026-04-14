@@ -22,6 +22,7 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip
+          pip install --force-reinstall --no-deps black==25.12.0
           pip install -e .[dev]
       - name: Lint
         run: ruff check src tests
@@ -47,6 +48,7 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip
+          pip install --force-reinstall --no-deps black==25.12.0
           pip install -e .[dev]
       - name: Test suite
         run: pytest --cov=src --cov-report=xml
