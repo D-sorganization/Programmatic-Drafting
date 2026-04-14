@@ -92,3 +92,23 @@ def test_invalid_dimensions_raise_value_error() -> None:
                 ),
             )
         )
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_side_port_rejects_non_finite_clock_angle(value: float) -> None:
+    with pytest.raises(ValueError, match="clock_angle_degrees"):
+        VesselSidePort(
+            clock_angle_degrees=value,
+            diameter_in=2.0,
+            height_above_glass_surface_in=1.0,
+        )
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_lid_port_rejects_non_finite_clock_angle(value: float) -> None:
+    with pytest.raises(ValueError, match="clock_angle_degrees"):
+        VesselLidPort(
+            clock_angle_degrees=value,
+            diameter_in=2.0,
+            radial_distance_from_center_in=1.0,
+        )
