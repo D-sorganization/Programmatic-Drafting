@@ -8,8 +8,8 @@ from typing import Any
 
 from programmatic_drafting.constants import MM_PER_INCH
 from programmatic_drafting.contracts import (
-    require_fraction,
     require_finite,
+    require_fraction,
     require_integer_at_least,
     require_less_or_equal,
     require_nonnegative,
