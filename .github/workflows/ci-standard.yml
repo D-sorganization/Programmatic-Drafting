@@ -22,14 +22,14 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip
-          pip install --ignore-installed --no-deps black==25.12.0
-          pip install -e .[dev]
+          python -m pip install -e .
+          python -m pip install --target .ci-tools black==25.12.0 mypy==1.13.0 pytest==8.3.5 pytest-cov==6.0.0 ruff==0.14.10
       - name: Lint
-        run: ruff check src tests
+        run: PYTHONPATH=.ci-tools python -m ruff check src tests
       - name: Check formatting
-        run: black --check src tests
+        run: PYTHONPATH=.ci-tools python -m black --check src tests
       - name: Type check
-        run: mypy src tests --ignore-missing-imports
+        run: PYTHONPATH=.ci-tools python -m mypy src tests --ignore-missing-imports
 
   tests:
     needs: quality-gate
@@ -48,10 +48,10 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip
-          pip install --ignore-installed --no-deps black==25.12.0
-          pip install -e .[dev]
+          python -m pip install -e .
+          python -m pip install --target .ci-tools black==25.12.0 mypy==1.13.0 pytest==8.3.5 pytest-cov==6.0.0 ruff==0.14.10
       - name: Test suite
-        run: pytest --cov=src --cov-report=xml
+        run: PYTHONPATH=.ci-tools python -m pytest --cov=src --cov-report=xml
       - name: Build default STEP artifact
         run: python -m programmatic_drafting.cli export-electrode-advisor-default
       - name: Build cylindrical bath STEP artifact
