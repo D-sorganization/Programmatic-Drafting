@@ -7,8 +7,6 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QApplication,
-    QCheckBox,
-    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QGraphicsScene,
@@ -28,19 +26,24 @@ from programmatic_drafting.analysis.vessel_drafter_metrics import (
     build_material_metrics_report,
 )
 from programmatic_drafting.exporters.step_export import export_vessel_drafter_step
-from programmatic_drafting.gui.material_summary_table import MaterialSummaryTable
 from programmatic_drafting.gui.vessel_drafter_port_panel import (
-    PortFieldSpec,
     PortTableSection,
-    PortValueDialog,
     make_double_spin,
 )
+from programmatic_drafting.gui.vessel_drafter_port_prompts import (
+    prompt_add_lid_port,
+    prompt_add_side_port,
+)
+from programmatic_drafting.gui.vessel_drafter_preview_panel import PreviewPanel
 from programmatic_drafting.gui.vessel_drafter_rendering import (
     render_cross_section,
     render_plan,
 )
 from programmatic_drafting.gui.vessel_drafter_three_d_canvas import (
     VesselDrafterThreeDCanvas,
+)
+from programmatic_drafting.gui.vessel_drafter_three_d_sidebar import (
+    VesselThreeDSidebar,
 )
 from programmatic_drafting.gui.zoomable_graphics_view import ZoomableGraphicsView
 from programmatic_drafting.models.vessel_drafter import (
@@ -54,9 +57,6 @@ from programmatic_drafting.preview.vessel_drafter_preview import (
     build_plan_preview,
 )
 from programmatic_drafting.preview.vessel_drafter_scene import build_vessel_3d_scene
-from programmatic_drafting.preview.vessel_drafter_view_options import (
-    Vessel3DViewOptions,
-)
 
 
 class VesselDrafterWindow(QMainWindow):
@@ -111,7 +111,7 @@ class VesselDrafterWindow(QMainWindow):
         )
 
     def _build_preview_widgets(self) -> None:
-        """Create preview scenes, views, controls, and status widgets."""
+        """Create preview scenes, views, canvas, and sidebar widgets."""
         self.cross_section_scene = QGraphicsScene(self)
         self.cross_section_view = ZoomableGraphicsView(self)
         self.cross_section_view.setScene(self.cross_section_scene)
@@ -120,10 +120,15 @@ class VesselDrafterWindow(QMainWindow):
         self.plan_view.setScene(self.plan_scene)
         self.preview_tabs = QTabWidget(self)
         self.three_d_canvas = VesselDrafterThreeDCanvas()
-        self.material_summary_table = MaterialSummaryTable(self)
-        self.layer_visibility_checkboxes = self._build_layer_visibility_checkboxes()
-        self.section_cut_checkbox = QCheckBox("Split on vertical plane")
-        self.section_cut_angle_spin = self._build_section_cut_angle_spin()
+        self.three_d_sidebar = VesselThreeDSidebar()
+        # Expose sidebar sub-widgets for backward compatibility with callers
+        # and tests that reach them through the window.
+        self.layer_visibility_checkboxes = (
+            self.three_d_sidebar.layer_visibility_checkboxes
+        )
+        self.section_cut_checkbox = self.three_d_sidebar.section_cut_checkbox
+        self.section_cut_angle_spin = self.three_d_sidebar.section_cut_angle_spin
+        self.material_summary_table = self.three_d_sidebar.material_summary_table
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
 
@@ -232,6 +237,9 @@ class VesselDrafterWindow(QMainWindow):
             self._handle_section_cut_angle_changed
         )
         self.preview_tabs.currentChanged.connect(self._handle_preview_tab_changed)
+        self.three_d_sidebar.reset_view_button.clicked.connect(
+            self.three_d_canvas.reset_view
+        )
 
     def write_layout(self, layout: VesselDrafterLayout) -> None:
         self._suppress_preview_updates = True
@@ -387,44 +395,14 @@ class VesselDrafterWindow(QMainWindow):
         self.status_label.setText(f"Exported {output_path}")
 
     def _prompt_add_side_port(self) -> None:
-        dialog = PortValueDialog(
-            "Add Side Port",
-            (
-                PortFieldSpec("Clock angle (deg)", 0.0, 0.0, 360.0),
-                PortFieldSpec("Diameter (in)", 3.0, 0.1, 100.0),
-                PortFieldSpec("Height above glass (in)", 4.0, 0.0, 250.0),
-            ),
-            self,
-        )
-        if dialog.exec():
-            angle, diameter, height = dialog.values()
-            self.add_side_port(
-                VesselSidePort(
-                    clock_angle_degrees=angle,
-                    diameter_in=diameter,
-                    height_above_glass_surface_in=height,
-                )
-            )
+        port = prompt_add_side_port(self)
+        if port is not None:
+            self.add_side_port(port)
 
     def _prompt_add_lid_port(self) -> None:
-        dialog = PortValueDialog(
-            "Add Lid Port",
-            (
-                PortFieldSpec("Clock angle (deg)", 0.0, 0.0, 360.0),
-                PortFieldSpec("Diameter (in)", 4.0, 0.1, 100.0),
-                PortFieldSpec("Distance from center (in)", 8.0, 0.0, 500.0),
-            ),
-            self,
-        )
-        if dialog.exec():
-            angle, diameter, radius = dialog.values()
-            self.add_lid_port(
-                VesselLidPort(
-                    clock_angle_degrees=angle,
-                    diameter_in=diameter,
-                    radial_distance_from_center_in=radius,
-                )
-            )
+        port = prompt_add_lid_port(self)
+        if port is not None:
+            self.add_lid_port(port)
 
     def _remove_selected_side_ports(self) -> None:
         self.side_port_panel.remove_selected_rows()
@@ -434,136 +412,38 @@ class VesselDrafterWindow(QMainWindow):
         self.lid_port_panel.remove_selected_rows()
         self.update_preview()
 
-    def _build_preview_panel(
-        self,
-        title: str,
-        view: ZoomableGraphicsView,
-    ) -> QWidget:
-        title_label = QLabel(title)
-        zoom_in_button = QPushButton("+")
-        zoom_in_button.clicked.connect(view.zoom_in)
-        zoom_out_button = QPushButton("-")
-        zoom_out_button.clicked.connect(view.zoom_out)
-        reset_button = QPushButton("Reset")
-        reset_button.clicked.connect(view.reset_zoom)
-
-        header_layout = QHBoxLayout()
-        header_layout.addWidget(title_label)
-        header_layout.addStretch(1)
-        header_layout.addWidget(zoom_out_button)
-        header_layout.addWidget(zoom_in_button)
-        header_layout.addWidget(reset_button)
-
-        panel = QWidget()
-        panel_layout = QVBoxLayout(panel)
-        panel_layout.addLayout(header_layout)
-        panel_layout.addWidget(view, 1)
-        return panel
-
     def _build_preview_tabs(self) -> QTabWidget:
         previews_tab = QWidget()
         previews_layout = QVBoxLayout(previews_tab)
         previews_layout.addWidget(
-            self._build_preview_panel("Cross-Section Preview", self.cross_section_view),
+            PreviewPanel("Cross-Section Preview", self.cross_section_view),
             1,
         )
         previews_layout.addWidget(
-            self._build_preview_panel("Top View Preview", self.plan_view),
+            PreviewPanel("Top View Preview", self.plan_view),
             1,
         )
 
         three_d_tab = QWidget()
         three_d_layout = QHBoxLayout(three_d_tab)
         three_d_layout.addWidget(self.three_d_canvas, 1)
-        three_d_layout.addWidget(self._build_three_d_sidebar(), 0)
+        three_d_layout.addWidget(self.three_d_sidebar, 0)
 
         self.preview_tabs.addTab(previews_tab, "2D Previews")
         self.preview_tabs.addTab(three_d_tab, "3D Preview")
         return self.preview_tabs
 
-    def _build_three_d_sidebar(self) -> QWidget:
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        instructions = QLabel(
-            "Drag to rotate the model. Use the checkboxes to hide layers."
-        )
-        instructions.setWordWrap(True)
-        reset_view_button = QPushButton("Reset 3D View")
-        reset_view_button.clicked.connect(self.three_d_canvas.reset_view)
-
-        layout.addWidget(instructions)
-        layout.addWidget(reset_view_button)
-        layout.addWidget(self._build_layer_visibility_panel())
-        layout.addWidget(self._build_section_cut_panel())
-        layout.addWidget(QLabel("Material Summary"))
-        layout.addWidget(self.material_summary_table)
-        layout.addStretch(1)
-        panel.setMinimumWidth(360)
-        return panel
-
-    def _build_layer_visibility_panel(self) -> QWidget:
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.addWidget(QLabel("Visible Layers"))
-        for checkbox in self.layer_visibility_checkboxes.values():
-            layout.addWidget(checkbox)
-        layout.addStretch(1)
-        return panel
-
-    def _build_section_cut_panel(self) -> QWidget:
-        panel = QWidget()
-        layout = QFormLayout(panel)
-        layout.addRow(self.section_cut_checkbox)
-        layout.addRow("Split angle (deg)", self.section_cut_angle_spin)
-        return panel
-
-    def _build_layer_visibility_checkboxes(self) -> dict[str, QCheckBox]:
-        materials = DEFAULT_VESSEL_DRAFTER_LAYOUT.material_properties_by_name
-        labels = (
-            "glass_bath",
-            "hot_face_refractory",
-            "ifb",
-            "duraboard",
-            "steel_shell",
-            "electrodes",
-        )
-        checkboxes: dict[str, QCheckBox] = {}
-        for label in labels:
-            checkbox = QCheckBox(materials[label].display_name)
-            checkbox.setChecked(True)
-            checkboxes[label] = checkbox
-        return checkboxes
-
-    def _build_section_cut_angle_spin(self) -> QDoubleSpinBox:
-        spin = make_double_spin(0.0, 0.0, 360.0)
-        spin.setSingleStep(15.0)
-        spin.setEnabled(False)
-        return spin
-
     def _update_three_d_preview(self, layout: VesselDrafterLayout) -> None:
-        view_options = self._read_three_d_view_options()
+        view_options = self.three_d_sidebar.read_view_options()
         self.three_d_canvas.draw_scene(
             build_vessel_3d_scene(
                 layout,
-                visible_labels=self._visible_layer_labels(),
+                visible_labels=self.three_d_sidebar.visible_layer_labels(),
                 view_options=view_options,
             ),
             view_options,
         )
         self._three_d_preview_dirty = False
-
-    def _visible_layer_labels(self) -> set[str]:
-        return {
-            label
-            for label, checkbox in self.layer_visibility_checkboxes.items()
-            if checkbox.isChecked()
-        }
-
-    def _read_three_d_view_options(self) -> Vessel3DViewOptions:
-        return Vessel3DViewOptions(
-            split_enabled=self.section_cut_checkbox.isChecked(),
-            split_angle_degrees=self.section_cut_angle_spin.value(),
-        )
 
     def _handle_preview_tab_changed(self, index: int) -> None:
         if index != self.preview_tabs.indexOf(self.preview_tabs.widget(1)):
@@ -576,12 +456,14 @@ class VesselDrafterWindow(QMainWindow):
 
     def _handle_section_cut_toggled(self, checked: bool) -> None:
         self.section_cut_angle_spin.setEnabled(checked)
-        self.three_d_canvas.queue_default_view(self._read_three_d_view_options())
+        self.three_d_canvas.queue_default_view(self.three_d_sidebar.read_view_options())
         self.refresh_three_d_preview()
 
     def _handle_section_cut_angle_changed(self, _: float) -> None:
         if self.section_cut_checkbox.isChecked():
-            self.three_d_canvas.queue_default_view(self._read_three_d_view_options())
+            self.three_d_canvas.queue_default_view(
+                self.three_d_sidebar.read_view_options()
+            )
         self.refresh_three_d_preview()
 
 
