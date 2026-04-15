@@ -85,7 +85,8 @@ def test_band_boundary_loops_mirror_each_shell_band() -> None:
     assert first_outer_loop[0].x_in == pytest.approx(0.0)
     assert first_outer_loop[-1].x_in == pytest.approx(0.0)
     assert max(point.x_in for point in first_outer_loop) == pytest.approx(
-        layout.inner_radius_in + first_profile.band.outer_radius_in
+        layout.inner_radius_in
+        + first_profile.band.outer_radius_in
         - first_profile.band.inner_radius_in
     )
 

@@ -25,12 +25,15 @@ def test_triangulate_profile_loop_returns_expected_triangle_count() -> None:
 
 
 def test_triangulate_profile_loop_returns_empty_for_too_small_loop() -> None:
-    assert _triangulate_profile_loop(
-        (
-            ProfilePoint(0.0, 0.0),
-            ProfilePoint(1.0, 1.0),
+    assert (
+        _triangulate_profile_loop(
+            (
+                ProfilePoint(0.0, 0.0),
+                ProfilePoint(1.0, 1.0),
+            )
         )
-    ) == ()
+        == ()
+    )
 
 
 def test_revolved_profile_mesh_uses_stable_counts_and_split_caps() -> None:
