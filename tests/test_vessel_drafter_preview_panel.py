@@ -1,6 +1,7 @@
 """Tests for the reusable zoomable preview-panel widget."""
 
 import os
+from typing import cast
 
 import pytest
 from PyQt6.QtWidgets import QApplication
@@ -12,7 +13,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 def _ensure_app() -> QApplication:
-    return QApplication.instance() or QApplication([])
+    return cast(QApplication, QApplication.instance() or QApplication([]))
 
 
 def test_preview_panel_hosts_provided_view() -> None:

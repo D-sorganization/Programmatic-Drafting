@@ -1,6 +1,7 @@
 """Tests for the side/lid port prompt dialog helpers."""
 
 import os
+from typing import cast
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QWidget
@@ -19,7 +20,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 def _ensure_app() -> QApplication:
-    return QApplication.instance() or QApplication([])
+    return cast(QApplication, QApplication.instance() or QApplication([]))
 
 
 class _FakeDialog:
