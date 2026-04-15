@@ -12,7 +12,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 def _ensure_app() -> QApplication:
-    return QApplication.instance() or QApplication([])
+    app = QApplication.instance()
+    if app is None:
+        return QApplication([])
+    assert isinstance(app, QApplication)
+    return app
 
 
 def test_preview_panel_hosts_provided_view() -> None:
