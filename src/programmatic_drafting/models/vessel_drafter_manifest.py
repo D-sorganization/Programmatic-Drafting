@@ -20,6 +20,25 @@ if TYPE_CHECKING:
     from programmatic_drafting.models.vessel_drafter import VesselDrafterLayout
 
 
+def build_vessel_drafter_manifest(
+    layout: VesselDrafterLayout,
+) -> dict[str, Any]:
+    """Build the full vessel drafter manifest."""
+    return {
+        "project": "vessel_drafter_default",
+        "units": {"source": "inches", "cad": "millimeters"},
+        "vessel": _build_vessel_manifest(layout),
+        "materials": _build_shell_materials_manifest(layout.layers[1:]),
+        "glass_bath": _build_glass_bath_manifest(
+            layout.layers[0],
+            layout.glass_depth_in,
+        ),
+        "electrodes": _build_electrodes_manifest(layout),
+        "ports": _build_ports_manifest(layout),
+        "drafting_assumptions": _build_drafting_assumptions_manifest(),
+    }
+
+
 def _build_vessel_manifest(layout: VesselDrafterLayout) -> dict[str, Any]:
     """Build the vessel geometry section for a manifest.
 
