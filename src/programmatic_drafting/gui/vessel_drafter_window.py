@@ -61,11 +61,25 @@ from programmatic_drafting.preview.vessel_drafter_view_options import (
 class VesselDrafterWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Vessel Drafter")
-        self.resize(1400, 880)
+        self._configure_window()
         self._suppress_preview_updates = False
         self._three_d_preview_dirty = True
+        self._build_dimension_controls()
+        self._build_electrode_controls()
+        self._build_port_panels()
+        self._build_preview_widgets()
+        self._build_ui()
+        self._connect_signals()
+        self.write_layout(DEFAULT_VESSEL_DRAFTER_LAYOUT)
+        self.update_preview()
 
+    def _configure_window(self) -> None:
+        """Apply static top-level window settings."""
+        self.setWindowTitle("Vessel Drafter")
+        self.resize(1400, 880)
+
+    def _build_dimension_controls(self) -> None:
+        """Create vessel dimension controls."""
         self.inner_diameter_spin = make_double_spin(50.0, 1.0, 500.0)
         self.glass_depth_spin = make_double_spin(14.0, 1.0, 250.0)
         self.plenum_height_spin = make_double_spin(14.0, 1.0, 250.0)
@@ -74,6 +88,9 @@ class VesselDrafterWindow(QMainWindow):
         self.ifb_spin = make_double_spin(4.5, 0.1, 50.0)
         self.duraboard_spin = make_double_spin(1.0, 0.1, 20.0)
         self.steel_spin = make_double_spin(0.5, 0.1, 10.0)
+
+    def _build_electrode_controls(self) -> None:
+        """Create electrode parameter controls."""
         self.electrode_count_spin = QSpinBox()
         self.electrode_count_spin.setRange(1, 12)
         self.electrode_count_spin.setValue(3)
@@ -81,6 +98,8 @@ class VesselDrafterWindow(QMainWindow):
         self.electrode_insertion_spin = make_double_spin(14.0, 0.1, 100.0)
         self.electrode_extension_spin = make_double_spin(36.0, 0.1, 150.0)
 
+    def _build_port_panels(self) -> None:
+        """Create editable side and lid port panels."""
         self.side_port_panel = PortTableSection(
             "Side Ports",
             ("Clock Angle", "Diameter", "Height Above Glass"),
@@ -90,6 +109,8 @@ class VesselDrafterWindow(QMainWindow):
             ("Clock Angle", "Diameter", "Distance From Center"),
         )
 
+    def _build_preview_widgets(self) -> None:
+        """Create preview scenes, views, controls, and status widgets."""
         self.cross_section_scene = QGraphicsScene(self)
         self.cross_section_view = ZoomableGraphicsView(self)
         self.cross_section_view.setScene(self.cross_section_scene)
@@ -104,11 +125,6 @@ class VesselDrafterWindow(QMainWindow):
         self.section_cut_angle_spin = self._build_section_cut_angle_spin()
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
-
-        self._build_ui()
-        self._connect_signals()
-        self.write_layout(DEFAULT_VESSEL_DRAFTER_LAYOUT)
-        self.update_preview()
 
     def _build_ui(self) -> None:
         root = QWidget()

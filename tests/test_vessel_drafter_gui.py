@@ -119,6 +119,24 @@ def test_window_exposes_three_d_preview_and_layer_controls() -> None:
     app.quit()
 
 
+def test_window_initializes_control_groups() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = VesselDrafterWindow()
+
+    assert window.windowTitle() == "Vessel Drafter"
+    assert window.inner_diameter_spin.maximum() == pytest.approx(500.0)
+    assert window.electrode_count_spin.minimum() == 1
+    assert window.electrode_count_spin.maximum() == 12
+    assert window.side_port_panel.title() == "Side Ports"
+    assert window.lid_port_panel.title() == "Lid Ports"
+    assert window.cross_section_view.scene() is window.cross_section_scene
+    assert window.plan_view.scene() is window.plan_scene
+    assert window.status_label.wordWrap()
+
+    window.close()
+    app.quit()
+
+
 def test_section_cut_angle_changes_reset_three_d_view_to_section_plane() -> None:
     app = QApplication.instance() or QApplication([])
     window = VesselDrafterWindow()
