@@ -82,62 +82,73 @@ class ElectrodeAdvisorLayout:
     def to_manifest(self) -> dict[str, Any]:
         return {
             "project": "electrode_advisor_default_layout",
-            "source_viewer": {
-                "component": (
-                    "Tools/src/electrode_advisor/web/src/components/"
-                    "GlassBath3DViewer.tsx"
-                ),
-                "calculator": (
-                    "Tools/src/electrode_advisor/web/src/components/"
-                    "ElectrodeAdvisorCalculator.tsx"
-                ),
-            },
-            "bath": {
-                "shape": self.bath.shape,
-                "width_m": self.bath.width_m,
-                "depth_m": self.bath.depth_m,
-                "height_m": self.bath.height_m,
-                "glass_level_m": self.bath.glass_level_m,
-            },
-            "electrodes": {
-                "type": self.electrodes.electrode_type,
-                "count": self.electrodes.count,
-                "top_offset_m": self.electrodes.top_offset_m,
-                "current_length_mm": self.electrodes.current_length_mm,
-                "worn_length_mm": self.electrodes.worn_length_mm,
-                "diameter_mm": self.electrodes.diameter_mm,
-                "operating_current_a": self.electrodes.operating_current_a,
-                "plasma_temperature_c": self.electrodes.plasma_temperature_c,
-            },
-            "drafting_assumptions": {
-                "bath_shell_thickness_mm": self.drafting.bath_shell_thickness_mm,
-                "glass_clearance_mm": self.drafting.glass_clearance_mm,
-                "electrode_holder_height_mm": self.drafting.electrode_holder_height_mm,
-                "electrode_holder_radius_factor": (
-                    self.drafting.electrode_holder_radius_factor
-                ),
-                "tip_band_height_mm": self.drafting.tip_band_height_mm,
-            },
-            "placements": [
-                {
-                    "index": item.index,
-                    "angle_radians": item.angle_radians,
-                    "viewer_position_m": [
-                        item.viewer_x_m,
-                        item.viewer_y_m,
-                        item.viewer_z_m,
-                    ],
-                    "cad_position_mm": [
-                        item.cad_x_mm,
-                        item.cad_y_mm,
-                        item.cad_z_mm,
-                    ],
-                    "effective_length_mm": item.effective_length_mm,
-                    "current_a": item.current_a,
-                }
-                for item in self.placements
-            ],
+            "source_viewer": _build_source_viewer_manifest(),
+            "bath": _build_bath_manifest(self.bath),
+            "electrodes": _build_electrodes_manifest(self.electrodes),
+            "drafting_assumptions": _build_drafting_manifest(self.drafting),
+            "placements": [_build_placement_manifest(item) for item in self.placements],
         }
+
+
+def _build_source_viewer_manifest() -> dict[str, str]:
+    """Build source UI provenance for the generated manifest."""
+    return {
+        "component": (
+            "Tools/src/electrode_advisor/web/src/components/GlassBath3DViewer.tsx"
+        ),
+        "calculator": (
+            "Tools/src/electrode_advisor/web/src/components/"
+            "ElectrodeAdvisorCalculator.tsx"
+        ),
+    }
+
+
+def _build_bath_manifest(bath: BathDefaults) -> dict[str, Any]:
+    """Build the bath geometry section for a manifest."""
+    return {
+        "shape": bath.shape,
+        "width_m": bath.width_m,
+        "depth_m": bath.depth_m,
+        "height_m": bath.height_m,
+        "glass_level_m": bath.glass_level_m,
+    }
+
+
+def _build_electrodes_manifest(electrodes: ElectrodeDefaults) -> dict[str, Any]:
+    """Build the electrode defaults section for a manifest."""
+    return {
+        "type": electrodes.electrode_type,
+        "count": electrodes.count,
+        "top_offset_m": electrodes.top_offset_m,
+        "current_length_mm": electrodes.current_length_mm,
+        "worn_length_mm": electrodes.worn_length_mm,
+        "diameter_mm": electrodes.diameter_mm,
+        "operating_current_a": electrodes.operating_current_a,
+        "plasma_temperature_c": electrodes.plasma_temperature_c,
+    }
+
+
+def _build_drafting_manifest(drafting: DraftingEnvelope) -> dict[str, float]:
+    """Build drafting assumptions for a manifest."""
+    return {
+        "bath_shell_thickness_mm": drafting.bath_shell_thickness_mm,
+        "glass_clearance_mm": drafting.glass_clearance_mm,
+        "electrode_holder_height_mm": drafting.electrode_holder_height_mm,
+        "electrode_holder_radius_factor": drafting.electrode_holder_radius_factor,
+        "tip_band_height_mm": drafting.tip_band_height_mm,
+    }
+
+
+def _build_placement_manifest(item: ElectrodePlacement) -> dict[str, Any]:
+    """Build one electrode placement entry for a manifest."""
+    return {
+        "index": item.index,
+        "angle_radians": item.angle_radians,
+        "viewer_position_m": [item.viewer_x_m, item.viewer_y_m, item.viewer_z_m],
+        "cad_position_mm": [item.cad_x_mm, item.cad_y_mm, item.cad_z_mm],
+        "effective_length_mm": item.effective_length_mm,
+        "current_a": item.current_a,
+    }
 
 
 def _build_default_placements(
