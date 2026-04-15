@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from programmatic_drafting.analysis.vessel_drafter_metrics import (
+    MaterialMetricsReport,
     build_material_metrics_report,
 )
 from programmatic_drafting.exporters.step_export import export_vessel_drafter_step
@@ -344,14 +345,7 @@ class VesselDrafterWindow(QMainWindow):
         self.material_summary_table.set_report(metrics)
         self.cross_section_view.sync_to_scene()
         self.plan_view.sync_to_scene()
-        self.status_label.setText(
-            f"Outer diameter: {layout.outer_diameter_in:.2f} in | "
-            f"Full height: {layout.full_height_in:.2f} in | "
-            f"Ports: {len(layout.side_ports)} side, {len(layout.lid_ports)} lid | "
-            f"Refractory: {metrics.refractory_total_volume_ft3:.2f} ft^3, "
-            f"{metrics.refractory_total_surface_area_ft2:.2f} ft^2, "
-            f"{metrics.refractory_total_mass_lb:.1f} lb"
-        )
+        self.status_label.setText(_format_status_text(layout, metrics))
 
     def refresh_three_d_preview(self) -> None:
         if self._suppress_preview_updates:
@@ -596,3 +590,18 @@ def launch() -> int:
     window = VesselDrafterWindow()
     window.show()
     return app.exec()
+
+
+def _format_status_text(
+    layout: VesselDrafterLayout,
+    metrics: MaterialMetricsReport,
+) -> str:
+    """Build the compact status summary shown after preview refresh."""
+    return (
+        f"Outer diameter: {layout.outer_diameter_in:.2f} in | "
+        f"Full height: {layout.full_height_in:.2f} in | "
+        f"Ports: {len(layout.side_ports)} side, {len(layout.lid_ports)} lid | "
+        f"Refractory: {metrics.refractory_total_volume_ft3:.2f} ft^3, "
+        f"{metrics.refractory_total_surface_area_ft2:.2f} ft^2, "
+        f"{metrics.refractory_total_mass_lb:.1f} lb"
+    )
