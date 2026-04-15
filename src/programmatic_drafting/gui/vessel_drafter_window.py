@@ -183,7 +183,13 @@ class VesselDrafterWindow(QMainWindow):
         return controls_scroll
 
     def _connect_signals(self) -> None:
-        widgets = (
+        self._connect_dimension_signals()
+        self._connect_port_panel_signals()
+        self._connect_preview_signals()
+
+    def _dimension_controls(self) -> tuple:
+        """Return controls whose value changes refresh the 2D previews."""
+        return (
             self.inner_diameter_spin,
             self.glass_depth_spin,
             self.plenum_height_spin,
@@ -197,9 +203,14 @@ class VesselDrafterWindow(QMainWindow):
             self.electrode_insertion_spin,
             self.electrode_extension_spin,
         )
-        for widget in widgets:
+
+    def _connect_dimension_signals(self) -> None:
+        """Connect scalar dimension/electrode controls to preview refresh."""
+        for widget in self._dimension_controls():
             widget.valueChanged.connect(self.update_preview)
 
+    def _connect_port_panel_signals(self) -> None:
+        """Connect port table controls to add/remove/refresh handlers."""
         self.side_port_panel.add_button.clicked.connect(self._prompt_add_side_port)
         self.lid_port_panel.add_button.clicked.connect(self._prompt_add_lid_port)
         self.side_port_panel.remove_button.clicked.connect(
@@ -210,6 +221,9 @@ class VesselDrafterWindow(QMainWindow):
         )
         self.side_port_panel.table.itemChanged.connect(self.update_preview)
         self.lid_port_panel.table.itemChanged.connect(self.update_preview)
+
+    def _connect_preview_signals(self) -> None:
+        """Connect preview option controls to their 3D preview handlers."""
         for checkbox in self.layer_visibility_checkboxes.values():
             checkbox.toggled.connect(self.refresh_three_d_preview)
         self.section_cut_checkbox.toggled.connect(self._handle_section_cut_toggled)

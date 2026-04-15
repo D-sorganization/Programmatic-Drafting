@@ -134,6 +134,7 @@ def test_window_initializes_control_groups() -> None:
     assert window.refresh_button.text() == "Refresh Preview"
     assert window.export_button.text() == "Export STEP"
     assert window.status_label.wordWrap()
+    assert len(window._dimension_controls()) == 12
 
     window.close()
     app.quit()
