@@ -55,16 +55,12 @@ def build_top_head_curve(
     offset_in: float = 0.0,
     sample_count: int = HEAD_SAMPLE_COUNT,
 ) -> tuple[ProfilePoint, ...]:
-    return tuple(
-        _offset_ellipse_point(
-            radius_in=layout.inner_radius_in,
-            depth_in=layout.head_depth_in,
-            offset_in=offset_in,
-            springline_z_in=layout.straight_shell_height_in,
-            theta_radians=(pi * 0.5) * (step / sample_count),
-            top=True,
-        )
-        for step in range(sample_count + 1)
+    return _build_head_curve(
+        layout=layout,
+        offset_in=offset_in,
+        sample_count=sample_count,
+        springline_z_in=layout.straight_shell_height_in,
+        top=True,
     )
 
 
@@ -73,16 +69,12 @@ def build_bottom_head_curve(
     offset_in: float = 0.0,
     sample_count: int = HEAD_SAMPLE_COUNT,
 ) -> tuple[ProfilePoint, ...]:
-    return tuple(
-        _offset_ellipse_point(
-            radius_in=layout.inner_radius_in,
-            depth_in=layout.head_depth_in,
-            offset_in=offset_in,
-            springline_z_in=0.0,
-            theta_radians=(pi * 0.5) * (1.0 - (step / sample_count)),
-            top=False,
-        )
-        for step in range(sample_count + 1)
+    return _build_head_curve(
+        layout=layout,
+        offset_in=offset_in,
+        sample_count=sample_count,
+        springline_z_in=0.0,
+        top=False,
     )
 
 
@@ -180,4 +172,30 @@ def _offset_ellipse_point(
     return ProfilePoint(
         x_in=base_x_in + (offset_in * normal_x),
         z_in=base_z_in + (offset_in * normal_z),
+    )
+
+
+def _build_head_curve(
+    layout: VesselDrafterLayout,
+    offset_in: float,
+    sample_count: int,
+    springline_z_in: float,
+    top: bool,
+) -> tuple[ProfilePoint, ...]:
+    if sample_count < 1:
+        raise ValueError("sample_count must be at least 1")
+    return tuple(
+        _offset_ellipse_point(
+            radius_in=layout.inner_radius_in,
+            depth_in=layout.head_depth_in,
+            offset_in=offset_in,
+            springline_z_in=springline_z_in,
+            theta_radians=(
+                (pi * 0.5) * (step / sample_count)
+                if top
+                else (pi * 0.5) * (1.0 - (step / sample_count))
+            ),
+            top=top,
+        )
+        for step in range(sample_count + 1)
     )
