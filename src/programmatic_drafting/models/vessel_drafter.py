@@ -1,4 +1,12 @@
-"""Validated defaults and geometry helpers for the vessel drafter tool."""
+"""Validated defaults and geometry helpers for the vessel drafter tool.
+
+The dataclass types (``MaterialLayer``, ``RadialBand``,
+``VesselElectrodePlacement``, ``VesselSidePort``, ``VesselLidPort``) are
+defined in :mod:`programmatic_drafting.models.vessel_drafter_types` and the
+manifest builders live in
+:mod:`programmatic_drafting.models.vessel_drafter_manifest`. Both are
+re-exported from this module for backwards compatibility.
+"""
 
 from __future__ import annotations
 
@@ -8,115 +16,53 @@ from typing import Any
 
 from programmatic_drafting.constants import MM_PER_INCH
 from programmatic_drafting.contracts import (
-    require_finite,
     require_fraction,
     require_integer_at_least,
     require_less_or_equal,
     require_nonnegative,
     require_positive,
 )
-from programmatic_drafting.models.ports import PortMixin
+from programmatic_drafting.models.vessel_drafter_manifest import (
+    _build_drafting_assumptions_manifest,
+    _build_electrodes_manifest,
+    _build_glass_bath_manifest,
+    _build_lid_port_manifest,
+    _build_material_manifest,
+    _build_ports_manifest,
+    _build_shell_materials_manifest,
+    _build_side_port_manifest,
+    _build_vessel_manifest,
+)
+from programmatic_drafting.models.vessel_drafter_types import (
+    MaterialLayer,
+    RadialBand,
+    VesselElectrodePlacement,
+    VesselLidPort,
+    VesselSidePort,
+)
 from programmatic_drafting.models.vessel_materials import (
     DEFAULT_VESSEL_MATERIALS_BY_NAME,
     MaterialProperties,
 )
 
-
-@dataclass(frozen=True)
-class MaterialLayer:
-    properties: MaterialProperties
-    thickness_in: float
-
-    @property
-    def name(self) -> str:
-        return self.properties.name
-
-    @property
-    def display_name(self) -> str:
-        return self.properties.display_name
-
-    @property
-    def color_hex(self) -> str:
-        return self.properties.color_hex
-
-    @property
-    def category(self) -> str:
-        return self.properties.category
-
-    @property
-    def density_lb_per_ft3(self) -> float:
-        return self.properties.density_lb_per_ft3
-
-    @property
-    def thermal_conductivity_w_per_mk(self) -> float:
-        return self.properties.thermal_conductivity_w_per_mk
-
-    @property
-    def thermal_expansion_um_per_m_c(self) -> float:
-        return self.properties.thermal_expansion_um_per_m_c
-
-    @property
-    def preview_alpha(self) -> float:
-        return self.properties.preview_alpha
-
-
-@dataclass(frozen=True)
-class RadialBand:
-    name: str
-    color_hex: str
-    inner_radius_in: float
-    outer_radius_in: float
-
-    @property
-    def label(self) -> str:
-        return self.name
-
-    @property
-    def inner_offset_in(self) -> float:
-        return self.inner_radius_in
-
-
-@dataclass(frozen=True)
-class VesselElectrodePlacement:
-    index: int
-    angle_degrees: float
-    angle_radians: float
-    inner_tip_radius_in: float
-    outer_tip_radius_in: float
-    diameter_in: float
-
-
-@dataclass(frozen=True)
-class VesselSidePort(PortMixin):
-    clock_angle_degrees: float
-    diameter_in: float
-    height_above_glass_surface_in: float
-
-    def __post_init__(self) -> None:
-        require_finite("clock_angle_degrees", self.clock_angle_degrees)
-        require_positive("diameter_in", self.diameter_in)
-        require_nonnegative(
-            "height_above_glass_surface_in",
-            self.height_above_glass_surface_in,
-        )
-
-    def centerline_height_in(self, layout: VesselDrafterLayout) -> float:
-        return layout.glass_depth_in + self.height_above_glass_surface_in
-
-
-@dataclass(frozen=True)
-class VesselLidPort(PortMixin):
-    clock_angle_degrees: float
-    diameter_in: float
-    radial_distance_from_center_in: float
-
-    def __post_init__(self) -> None:
-        require_finite("clock_angle_degrees", self.clock_angle_degrees)
-        require_positive("diameter_in", self.diameter_in)
-        require_nonnegative(
-            "radial_distance_from_center_in",
-            self.radial_distance_from_center_in,
-        )
+__all__ = [
+    "DEFAULT_VESSEL_DRAFTER_LAYOUT",
+    "MaterialLayer",
+    "RadialBand",
+    "VesselDrafterLayout",
+    "VesselElectrodePlacement",
+    "VesselLidPort",
+    "VesselSidePort",
+    "_build_drafting_assumptions_manifest",
+    "_build_electrodes_manifest",
+    "_build_glass_bath_manifest",
+    "_build_lid_port_manifest",
+    "_build_material_manifest",
+    "_build_ports_manifest",
+    "_build_shell_materials_manifest",
+    "_build_side_port_manifest",
+    "_build_vessel_manifest",
+]
 
 
 @dataclass(frozen=True)
@@ -343,132 +289,6 @@ class VesselDrafterLayout:
             "ports": _build_ports_manifest(self),
             "drafting_assumptions": _build_drafting_assumptions_manifest(),
         }
-
-
-def _build_vessel_manifest(layout: VesselDrafterLayout) -> dict[str, Any]:
-    """Build the vessel geometry section for a manifest.
-
-    Preconditions:
-        layout must be a validated VesselDrafterLayout.
-    """
-    return {
-        "inner_diameter_in": layout.inner_diameter_in,
-        "glass_depth_in": layout.glass_depth_in,
-        "plenum_height_in": layout.plenum_height_in,
-        "head_depth_in": layout.head_depth_in,
-        "outer_diameter_in": layout.outer_diameter_in,
-        "full_height_in": layout.full_height_in,
-        "outer_head_depth_in": layout.outer_head_depth_in,
-    }
-
-
-def _build_shell_materials_manifest(
-    layers: tuple[MaterialLayer, ...],
-) -> dict[str, Any]:
-    """Build the material section for the shell layers."""
-    return {layer.name: _build_material_manifest(layer) for layer in layers}
-
-
-def _build_material_manifest(layer: MaterialLayer) -> dict[str, Any]:
-    """Build one shell material manifest entry.
-
-    Preconditions:
-        layer must be a validated MaterialLayer.
-    """
-    return {
-        "thickness_in": layer.thickness_in,
-        "display_name": layer.display_name,
-        "color_hex": layer.color_hex,
-        "density_lb_per_ft3": layer.density_lb_per_ft3,
-        "thermal_conductivity_w_per_mk": layer.thermal_conductivity_w_per_mk,
-        "thermal_expansion_um_per_m_c": layer.thermal_expansion_um_per_m_c,
-    }
-
-
-def _build_glass_bath_manifest(
-    layer: MaterialLayer,
-    height_in: float,
-) -> dict[str, Any]:
-    """Build the glass bath manifest entry.
-
-    Preconditions:
-        layer must be the validated glass bath layer for the layout.
-        height_in must match the layout's glass depth.
-    """
-    return {
-        "display_name": layer.display_name,
-        "color_hex": layer.color_hex,
-        "height_in": height_in,
-        "density_lb_per_ft3": layer.density_lb_per_ft3,
-        "thermal_conductivity_w_per_mk": layer.thermal_conductivity_w_per_mk,
-        "thermal_expansion_um_per_m_c": layer.thermal_expansion_um_per_m_c,
-    }
-
-
-def _build_electrodes_manifest(layout: VesselDrafterLayout) -> dict[str, Any]:
-    """Build the electrode manifest section."""
-    return {
-        "count": layout.electrode_count,
-        "diameter_in": layout.electrode_diameter_in,
-        "insertion_into_inner_circle_in": (
-            layout.electrode_insertion_into_inner_circle_in
-        ),
-        "extension_past_inner_circle_in": (
-            layout.electrode_extension_past_inner_circle_in
-        ),
-        "modeled_length_in": layout.electrode_length_in,
-        "centerline_height_in": layout.electrode_centerline_height_in,
-    }
-
-
-def _build_ports_manifest(layout: VesselDrafterLayout) -> dict[str, Any]:
-    """Build the side and lid port manifest sections."""
-    return {
-        "side": [_build_side_port_manifest(layout, port) for port in layout.side_ports],
-        "lid": [_build_lid_port_manifest(port) for port in layout.lid_ports],
-    }
-
-
-def _build_side_port_manifest(
-    layout: VesselDrafterLayout,
-    port: VesselSidePort,
-) -> dict[str, Any]:
-    """Build one side-port manifest entry.
-
-    Preconditions:
-        layout must be a validated VesselDrafterLayout.
-        port must be a validated VesselSidePort associated with the layout.
-    """
-    return {
-        "clock_angle_degrees": port.normalized_clock_angle_degrees,
-        "diameter_in": port.diameter_in,
-        "height_above_glass_surface_in": port.height_above_glass_surface_in,
-        "centerline_height_in": port.centerline_height_in(layout),
-    }
-
-
-def _build_lid_port_manifest(port: VesselLidPort) -> dict[str, Any]:
-    """Build one lid-port manifest entry.
-
-    Preconditions:
-        port must be a validated VesselLidPort.
-    """
-    return {
-        "clock_angle_degrees": port.normalized_clock_angle_degrees,
-        "diameter_in": port.diameter_in,
-        "radial_distance_from_center_in": port.radial_distance_from_center_in,
-    }
-
-
-def _build_drafting_assumptions_manifest() -> dict[str, Any]:
-    """Build the fixed drafting assumptions section."""
-    return {
-        "axis_convention": "Z up",
-        "plenum_only_internal_void": True,
-        "dished_heads": (
-            "Offset elliptical head profiles with " "constant-thickness shell layers"
-        ),
-    }
 
 
 DEFAULT_VESSEL_DRAFTER_LAYOUT = VesselDrafterLayout()
