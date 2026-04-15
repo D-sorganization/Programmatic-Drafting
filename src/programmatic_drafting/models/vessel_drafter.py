@@ -32,6 +32,7 @@ from programmatic_drafting.models.vessel_drafter_manifest import (
     _build_shell_materials_manifest,
     _build_side_port_manifest,
     _build_vessel_manifest,
+    build_vessel_drafter_manifest,
 )
 from programmatic_drafting.models.vessel_drafter_types import (
     MaterialLayer,
@@ -62,6 +63,7 @@ __all__ = [
     "_build_shell_materials_manifest",
     "_build_side_port_manifest",
     "_build_vessel_manifest",
+    "build_vessel_drafter_manifest",
 ]
 
 
@@ -277,18 +279,7 @@ class VesselDrafterLayout:
             )
 
     def to_manifest(self) -> dict[str, Any]:
-        return {
-            "project": "vessel_drafter_default",
-            "units": {"source": "inches", "cad": "millimeters"},
-            "vessel": _build_vessel_manifest(self),
-            "materials": _build_shell_materials_manifest(self.layers[1:]),
-            "glass_bath": _build_glass_bath_manifest(
-                self.layers[0], self.glass_depth_in
-            ),
-            "electrodes": _build_electrodes_manifest(self),
-            "ports": _build_ports_manifest(self),
-            "drafting_assumptions": _build_drafting_assumptions_manifest(),
-        }
+        return build_vessel_drafter_manifest(self)
 
 
 DEFAULT_VESSEL_DRAFTER_LAYOUT = VesselDrafterLayout()

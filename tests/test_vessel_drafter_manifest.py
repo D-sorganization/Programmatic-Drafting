@@ -12,6 +12,7 @@ from programmatic_drafting.models.vessel_drafter import (
     _build_shell_materials_manifest,
     _build_side_port_manifest,
     _build_vessel_manifest,
+    build_vessel_drafter_manifest,
 )
 
 
@@ -49,6 +50,25 @@ def test_build_glass_bath_manifest_uses_glass_layer_properties() -> None:
     assert manifest["display_name"] == "Glass Bath"
     assert manifest["height_in"] == 14.0
     assert manifest["color_hex"] == layer.color_hex
+
+
+def test_build_vessel_drafter_manifest_includes_all_sections() -> None:
+    manifest = build_vessel_drafter_manifest(DEFAULT_VESSEL_DRAFTER_LAYOUT)
+
+    assert manifest["project"] == "vessel_drafter_default"
+    assert manifest["units"] == {"source": "inches", "cad": "millimeters"}
+    assert manifest["vessel"]["outer_head_depth_in"] == 24.5
+    assert manifest["materials"]["steel_shell"]["thickness_in"] == 0.5
+    assert manifest["glass_bath"]["display_name"] == "Glass Bath"
+    assert manifest["electrodes"]["modeled_length_in"] == 50.0
+    assert manifest["ports"] == {"side": [], "lid": []}
+    assert manifest["drafting_assumptions"]["axis_convention"] == "Z up"
+
+
+def test_layout_to_manifest_delegates_to_manifest_helper() -> None:
+    manifest = DEFAULT_VESSEL_DRAFTER_LAYOUT.to_manifest()
+
+    assert manifest == build_vessel_drafter_manifest(DEFAULT_VESSEL_DRAFTER_LAYOUT)
 
 
 def test_build_port_manifest_helpers_track_layout_geometry() -> None:
