@@ -15,59 +15,70 @@ from programmatic_drafting.exporters.step_export import (
 logger = logging.getLogger(__name__)
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Programmatic drafting CLI")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+def _add_export_command(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+    name: str,
+    help_text: str,
+    default_output: str,
+    default_manifest: str,
+) -> None:
+    """Register a STEP export command with shared output/manifest flags."""
+    command_parser = subparsers.add_parser(name, help=help_text)
+    command_parser.add_argument(
+        "--output",
+        default=default_output,
+        help="STEP output path.",
+    )
+    command_parser.add_argument(
+        "--manifest",
+        default=default_manifest,
+        help="JSON manifest output path.",
+    )
 
-    export_parser = subparsers.add_parser(
+
+def _add_export_commands(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    """Register all STEP export subcommands."""
+    _add_export_command(
+        subparsers,
         "export-electrode-advisor-default",
-        help="Export the default electrode advisor STEP artifact.",
+        "Export the default electrode advisor STEP artifact.",
+        "generated/electrode_advisor_default/electrode_advisor_default_layout.step",
+        "generated/electrode_advisor_default/electrode_advisor_default_layout.json",
     )
-    export_parser.add_argument(
-        "--output",
-        default="generated/electrode_advisor_default/electrode_advisor_default_layout.step",
-        help="STEP output path.",
-    )
-    export_parser.add_argument(
-        "--manifest",
-        default="generated/electrode_advisor_default/electrode_advisor_default_layout.json",
-        help="JSON manifest output path.",
-    )
-
-    cylindrical_parser = subparsers.add_parser(
+    _add_export_command(
+        subparsers,
         "export-cylindrical-bath-layout",
-        help="Export the cylindrical bath radial-electrode STEP artifact.",
+        "Export the cylindrical bath radial-electrode STEP artifact.",
+        "generated/cylindrical_bath_layout/cylindrical_bath_layout.step",
+        "generated/cylindrical_bath_layout/cylindrical_bath_layout.json",
     )
-    cylindrical_parser.add_argument(
-        "--output",
-        default="generated/cylindrical_bath_layout/cylindrical_bath_layout.step",
-        help="STEP output path.",
-    )
-    cylindrical_parser.add_argument(
-        "--manifest",
-        default="generated/cylindrical_bath_layout/cylindrical_bath_layout.json",
-        help="JSON manifest output path.",
-    )
-
-    vessel_parser = subparsers.add_parser(
+    _add_export_command(
+        subparsers,
         "export-vessel-drafter-default",
-        help="Export the default vessel drafter STEP artifact.",
-    )
-    vessel_parser.add_argument(
-        "--output",
-        default="generated/vessel_drafter_default/vessel_drafter_default.step",
-        help="STEP output path.",
-    )
-    vessel_parser.add_argument(
-        "--manifest",
-        default="generated/vessel_drafter_default/vessel_drafter_default.json",
-        help="JSON manifest output path.",
+        "Export the default vessel drafter STEP artifact.",
+        "generated/vessel_drafter_default/vessel_drafter_default.step",
+        "generated/vessel_drafter_default/vessel_drafter_default.json",
     )
 
+
+def _add_gui_commands(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    """Register GUI launcher subcommands."""
     subparsers.add_parser(
         "launch-vessel-drafter-gui",
         help="Launch the PyQt6 vessel drafter GUI.",
     )
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI parser from focused command-registration helpers."""
+    parser = argparse.ArgumentParser(description="Programmatic drafting CLI")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    _add_export_commands(subparsers)
+    _add_gui_commands(subparsers)
     return parser
 
 
