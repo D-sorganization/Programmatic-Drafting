@@ -45,5 +45,5 @@ target-version = "py310"
 select = ["E", "F", "I", "B"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 addopts = "-p no:xvfb"
+testpaths = ["tests"]
