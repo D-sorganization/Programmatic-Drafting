@@ -267,3 +267,18 @@ def test_custom_layout_scales_apex_height_linearly_with_head_depth() -> None:
     theta_quarter = (pi * 0.5) * (index_quarter / HEAD_SAMPLE_COUNT)
     expected_x = layout.inner_radius_in * cos(theta_quarter)
     assert curve[index_quarter].x_in == pytest.approx(expected_x)
+
+
+def test_build_top_head_curve_rejects_nonpositive_sample_count() -> None:
+    with pytest.raises(ValueError, match="sample_count must be at least 1"):
+        build_top_head_curve(sample_count=0)
+
+
+def test_build_shell_band_profiles_preserves_expected_cumulative_offsets() -> None:
+    band_profiles = build_shell_band_profiles()
+
+    expected_offsets = ((0.0, 6.0), (6.0, 10.5), (10.5, 11.5), (11.5, 12.0))
+    for profile, expected in zip(band_profiles, expected_offsets, strict=True):
+        expected_inner_offset, expected_outer_offset = expected
+        assert profile.inner_offset_in == pytest.approx(expected_inner_offset)
+        assert profile.outer_offset_in == pytest.approx(expected_outer_offset)
