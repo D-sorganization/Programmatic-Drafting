@@ -131,6 +131,8 @@ def test_window_initializes_control_groups() -> None:
     assert window.lid_port_panel.title() == "Lid Ports"
     assert window.cross_section_view.scene() is window.cross_section_scene
     assert window.plan_view.scene() is window.plan_scene
+    assert window.refresh_button.text() == "Refresh Preview"
+    assert window.export_button.text() == "Export STEP"
     assert window.status_label.wordWrap()
 
     window.close()
