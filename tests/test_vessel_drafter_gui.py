@@ -3,7 +3,11 @@ import os
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from programmatic_drafting.gui.vessel_drafter_window import VesselDrafterWindow
+from programmatic_drafting.analysis.vessel_drafter_metrics import MaterialMetricsReport
+from programmatic_drafting.gui.vessel_drafter_window import (
+    VesselDrafterWindow,
+    _format_status_text,
+)
 from programmatic_drafting.models.vessel_drafter import VesselLidPort, VesselSidePort
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -157,6 +161,28 @@ def test_section_cut_angle_changes_reset_three_d_view_to_section_plane() -> None
     app.processEvents()
 
     assert window.three_d_canvas.view_state == pytest.approx((0.0, -180.0))
+
+    window.close()
+    app.quit()
+
+
+def test_format_status_text_summarizes_layout_and_metrics() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = VesselDrafterWindow()
+    layout = window.read_layout()
+    metrics = MaterialMetricsReport(
+        component_metrics=(),
+        refractory_total_volume_in3=3456.0,
+        refractory_total_volume_ft3=2.0,
+        refractory_total_surface_area_ft2=3.5,
+        refractory_total_mass_lb=456.7,
+    )
+
+    status = _format_status_text(layout, metrics)
+
+    assert f"Outer diameter: {layout.outer_diameter_in:.2f} in" in status
+    assert "Ports: 0 side, 0 lid" in status
+    assert "Refractory: 2.00 ft^3, 3.50 ft^2, 456.7 lb" in status
 
     window.close()
     app.quit()
