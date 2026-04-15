@@ -130,6 +130,16 @@ class VesselDrafterWindow(QMainWindow):
         root = QWidget()
         self.setCentralWidget(root)
 
+        controls_scroll = self._build_controls_scroll_area()
+        preview_layout = QVBoxLayout()
+        preview_layout.addWidget(self._build_preview_tabs(), 1)
+
+        main_layout = QHBoxLayout(root)
+        main_layout.addWidget(controls_scroll, 0)
+        main_layout.addLayout(preview_layout, 1)
+
+    def _build_controls_form(self) -> QFormLayout:
+        """Build the static vessel/electrode controls form."""
         controls_form = QFormLayout()
         controls_form.addRow("Inner diameter (in)", self.inner_diameter_spin)
         controls_form.addRow("Glass depth (in)", self.glass_depth_spin)
@@ -143,15 +153,22 @@ class VesselDrafterWindow(QMainWindow):
         controls_form.addRow("Electrode diameter (in)", self.electrode_diameter_spin)
         controls_form.addRow("Electrode insertion (in)", self.electrode_insertion_spin)
         controls_form.addRow("Electrode extension (in)", self.electrode_extension_spin)
+        return controls_form
 
-        refresh_button = QPushButton("Refresh Preview")
-        refresh_button.clicked.connect(self.update_preview)
-        export_button = QPushButton("Export STEP")
-        export_button.clicked.connect(self.export_step_dialog)
+    def _build_action_buttons(self) -> tuple[QPushButton, QPushButton]:
+        """Create command buttons and wire their click handlers."""
+        self.refresh_button = QPushButton("Refresh Preview")
+        self.refresh_button.clicked.connect(self.update_preview)
+        self.export_button = QPushButton("Export STEP")
+        self.export_button.clicked.connect(self.export_step_dialog)
+        return self.refresh_button, self.export_button
 
+    def _build_controls_scroll_area(self) -> QScrollArea:
+        """Build the scrollable left-side controls column."""
+        refresh_button, export_button = self._build_action_buttons()
         controls_root = QWidget()
         controls_layout = QVBoxLayout(controls_root)
-        controls_layout.addLayout(controls_form)
+        controls_layout.addLayout(self._build_controls_form())
         controls_layout.addWidget(self.side_port_panel)
         controls_layout.addWidget(self.lid_port_panel)
         controls_layout.addWidget(refresh_button)
@@ -163,13 +180,7 @@ class VesselDrafterWindow(QMainWindow):
         controls_scroll.setWidgetResizable(True)
         controls_scroll.setWidget(controls_root)
         controls_scroll.setMinimumWidth(340)
-
-        preview_layout = QVBoxLayout()
-        preview_layout.addWidget(self._build_preview_tabs(), 1)
-
-        main_layout = QHBoxLayout(root)
-        main_layout.addWidget(controls_scroll, 0)
-        main_layout.addLayout(preview_layout, 1)
+        return controls_scroll
 
     def _connect_signals(self) -> None:
         widgets = (
