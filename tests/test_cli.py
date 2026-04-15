@@ -10,6 +10,42 @@ from programmatic_drafting import cli
 
 
 @pytest.mark.parametrize(
+    ("command", "expected_output", "expected_manifest"),
+    [
+        (
+            "export-electrode-advisor-default",
+            "generated/electrode_advisor_default/electrode_advisor_default_layout.step",
+            "generated/electrode_advisor_default/electrode_advisor_default_layout.json",
+        ),
+        (
+            "export-cylindrical-bath-layout",
+            "generated/cylindrical_bath_layout/cylindrical_bath_layout.step",
+            "generated/cylindrical_bath_layout/cylindrical_bath_layout.json",
+        ),
+        (
+            "export-vessel-drafter-default",
+            "generated/vessel_drafter_default/vessel_drafter_default.step",
+            "generated/vessel_drafter_default/vessel_drafter_default.json",
+        ),
+    ],
+)
+def test_build_parser_registers_export_defaults(
+    command: str, expected_output: str, expected_manifest: str
+) -> None:
+    args = cli.build_parser().parse_args([command])
+
+    assert args.command == command
+    assert args.output == expected_output
+    assert args.manifest == expected_manifest
+
+
+def test_build_parser_registers_gui_launcher() -> None:
+    args = cli.build_parser().parse_args(["launch-vessel-drafter-gui"])
+
+    assert args.command == "launch-vessel-drafter-gui"
+
+
+@pytest.mark.parametrize(
     ("command", "export_name", "expected_prefix", "expected_filename"),
     [
         (
