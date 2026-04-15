@@ -46,4 +46,4 @@ select = ["E", "F", "I", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-p no:xvfb"  # QT_QPA_PLATFORM=offscreen is set in CI; xvfb not needed
+addopts = "-p no:xvfb"
