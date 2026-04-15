@@ -14,6 +14,7 @@ from programmatic_drafting.preview.vessel_drafter_preview import (
     PlanCircularFeature,
     PlanPreview,
     PlanRadialFeature,
+    ProjectedSidePort,
 )
 from programmatic_drafting.projects.vessel_drafter_profiles import ProfilePoint
 
@@ -95,29 +96,52 @@ def _render_projected_side_ports(
     top_z_in: float,
 ) -> None:
     for port in preview.projected_side_ports:
-        center_y = PREVIEW_MARGIN + (
-            (top_z_in - port.centerline_height_in) * PREVIEW_SCALE
-        )
         radius_px = port.diameter_in * 0.5 * PREVIEW_SCALE
         for direction in (-1.0, 1.0):
-            center = QPointF(
-                center_x
-                + (
-                    direction
-                    * (preview.outer_radius_in - (port.diameter_in * 0.5))
-                    * PREVIEW_SCALE
+            item = _build_projected_side_port_item(
+                center=_projected_side_port_center(
+                    preview=preview,
+                    center_x=center_x,
+                    top_z_in=top_z_in,
+                    port=port,
+                    direction=direction,
                 ),
-                center_y,
+                radius_px=radius_px,
             )
-            path = QPainterPath()
-            path.addEllipse(center, radius_px, radius_px)
-            item = QGraphicsPathItem(path)
-            pen = QPen(QColor("#6AAED6"))
-            pen.setStyle(Qt.PenStyle.DashLine)
-            item.setPen(pen)
-            item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             item.setZValue(15.0)
             scene.addItem(item)
+
+
+def _projected_side_port_center(
+    *,
+    preview: CrossSectionPreview,
+    center_x: float,
+    top_z_in: float,
+    port: ProjectedSidePort,
+    direction: float,
+) -> QPointF:
+    """Map one projected side-port marker center into cross-section pixels."""
+    center_y = PREVIEW_MARGIN + ((top_z_in - port.centerline_height_in) * PREVIEW_SCALE)
+    radial_offset_px = (
+        direction * (preview.outer_radius_in - (port.diameter_in * 0.5)) * PREVIEW_SCALE
+    )
+    return QPointF(center_x + radial_offset_px, center_y)
+
+
+def _build_projected_side_port_item(
+    *,
+    center: QPointF,
+    radius_px: float,
+) -> QGraphicsPathItem:
+    """Build the dashed, unfilled ellipse item used for projected side ports."""
+    path = QPainterPath()
+    path.addEllipse(center, radius_px, radius_px)
+    item = QGraphicsPathItem(path)
+    pen = QPen(QColor("#6AAED6"))
+    pen.setStyle(Qt.PenStyle.DashLine)
+    item.setPen(pen)
+    item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+    return item
 
 
 def render_plan(scene: QGraphicsScene, preview: PlanPreview) -> None:
