@@ -44,6 +44,9 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "S"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # assert is idiomatic in pytest tests
+
 [tool.pytest.ini_options]
 addopts = "-p no:xvfb"
 testpaths = ["tests"]
