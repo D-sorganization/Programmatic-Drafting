@@ -64,8 +64,15 @@ def _build_vessel_3d_scene_cached(
     visible_labels = (
         None if visible_label_key_value is None else set(visible_label_key_value)
     )
-    if layout.side_ports or layout.lid_ports:
-        meshes = build_exact_meshes(layout, visible_labels, view_options)
-    else:
-        meshes = build_fast_meshes(layout, visible_labels, view_options)
+    meshes = _build_vessel_3d_scene_meshes(layout, visible_labels, view_options)
     return Vessel3DScene(meshes=meshes, bounds=scene_bounds(meshes))
+
+
+def _build_vessel_3d_scene_meshes(
+    layout: VesselDrafterLayout,
+    visible_labels: set[str] | None,
+    view_options: Vessel3DViewOptions,
+) -> tuple[VesselSceneMesh, ...]:
+    if layout.side_ports or layout.lid_ports:
+        return build_exact_meshes(layout, visible_labels, view_options)
+    return build_fast_meshes(layout, visible_labels, view_options)
