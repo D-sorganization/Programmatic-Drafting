@@ -93,50 +93,65 @@ class CylindricalBathLayout:
         return {
             "project": "cylindrical_bath_layout",
             "units": {"source": "inches", "cad": "millimeters"},
-            "bath": {
-                "shape": "cylindrical",
-                "inner_diameter_in": self.bath.inner_diameter_in,
-                "depth_in": self.bath.depth_in,
-                "refractory_thickness_in": self.bath.refractory_thickness_in,
-                "outer_diameter_in": self.bath.inner_diameter_in
-                + (2.0 * self.bath.refractory_thickness_in),
-            },
-            "electrodes": {
-                "count": self.electrodes.count,
-                "diameter_in": self.electrodes.diameter_in,
-                "insertion_into_inner_circle_in": (
-                    self.electrodes.insertion_into_inner_circle_in
-                ),
-                "extension_past_inner_circle_in": (
-                    self.electrodes.extension_past_inner_circle_in
-                ),
-                "modeled_length_in": (
-                    self.electrodes.insertion_into_inner_circle_in
-                    + self.electrodes.extension_past_inner_circle_in
-                ),
-                "center_height_fraction": self.electrodes.center_height_fraction,
-            },
-            "drafting_assumptions": {
-                "axis_convention": "Z up",
-                "electrodes_centered_vertically": True,
-                "electrode_tip_reference": (
-                    "Modeled from the inner-wall penetration tip to the external end."
-                ),
-                "conflicting_length_note_ignored": (
-                    "Used explicit 14 in insertion and 36 in extension values."
-                ),
-            },
-            "placements": [
-                {
-                    "index": item.index,
-                    "angle_degrees": item.angle_degrees,
-                    "center_mm": [item.center_x_mm, item.center_y_mm, 0.0],
-                    "inner_tip_mm": [item.inner_tip_x_mm, item.inner_tip_y_mm, 0.0],
-                    "outer_tip_mm": [item.outer_tip_x_mm, item.outer_tip_y_mm, 0.0],
-                }
-                for item in self.placements
-            ],
+            "bath": _build_bath_manifest(self.bath),
+            "electrodes": _build_electrodes_manifest(self.electrodes),
+            "drafting_assumptions": _build_drafting_manifest(),
+            "placements": [_build_placement_manifest(item) for item in self.placements],
         }
+
+
+def _build_bath_manifest(bath: CylindricalBathDefaults) -> dict[str, Any]:
+    """Build the bath geometry section for a manifest."""
+    return {
+        "shape": "cylindrical",
+        "inner_diameter_in": bath.inner_diameter_in,
+        "depth_in": bath.depth_in,
+        "refractory_thickness_in": bath.refractory_thickness_in,
+        "outer_diameter_in": bath.inner_diameter_in
+        + (2.0 * bath.refractory_thickness_in),
+    }
+
+
+def _build_electrodes_manifest(
+    electrodes: CylindricalElectrodeDefaults,
+) -> dict[str, Any]:
+    """Build the radial electrode defaults section for a manifest."""
+    return {
+        "count": electrodes.count,
+        "diameter_in": electrodes.diameter_in,
+        "insertion_into_inner_circle_in": electrodes.insertion_into_inner_circle_in,
+        "extension_past_inner_circle_in": electrodes.extension_past_inner_circle_in,
+        "modeled_length_in": (
+            electrodes.insertion_into_inner_circle_in
+            + electrodes.extension_past_inner_circle_in
+        ),
+        "center_height_fraction": electrodes.center_height_fraction,
+    }
+
+
+def _build_drafting_manifest() -> dict[str, Any]:
+    """Build drafting assumptions for the cylindrical bath manifest."""
+    return {
+        "axis_convention": "Z up",
+        "electrodes_centered_vertically": True,
+        "electrode_tip_reference": (
+            "Modeled from the inner-wall penetration tip to the external end."
+        ),
+        "conflicting_length_note_ignored": (
+            "Used explicit 14 in insertion and 36 in extension values."
+        ),
+    }
+
+
+def _build_placement_manifest(item: RadialElectrodePlacement) -> dict[str, Any]:
+    """Build one radial electrode placement entry for a manifest."""
+    return {
+        "index": item.index,
+        "angle_degrees": item.angle_degrees,
+        "center_mm": [item.center_x_mm, item.center_y_mm, 0.0],
+        "inner_tip_mm": [item.inner_tip_x_mm, item.inner_tip_y_mm, 0.0],
+        "outer_tip_mm": [item.outer_tip_x_mm, item.outer_tip_y_mm, 0.0],
+    }
 
 
 def _build_default_placements(
