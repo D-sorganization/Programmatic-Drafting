@@ -160,6 +160,6 @@ def _build_drafting_assumptions_manifest() -> dict[str, Any]:
         "axis_convention": "Z up",
         "plenum_only_internal_void": True,
         "dished_heads": (
-            "Offset elliptical head profiles with " "constant-thickness shell layers"
+            "Offset elliptical head profiles with constant-thickness shell layers"
         ),
     }

@@ -155,7 +155,18 @@ def render_plan(scene: QGraphicsScene, preview: PlanPreview) -> None:
         diameter_px + (PREVIEW_MARGIN * 2.0),
         diameter_px + (PREVIEW_MARGIN * 2.0),
     )
+    _render_plan_bands(scene, preview, center_x, center_y)
+    _render_plan_ports(scene, preview, center_x, center_y)
+    _render_plan_electrodes(scene, preview, center_x, center_y)
 
+
+def _render_plan_bands(
+    scene: QGraphicsScene,
+    preview: PlanPreview,
+    center_x: float,
+    center_y: float,
+) -> None:
+    """Render radial material bands as filled concentric ellipses."""
     for band in reversed(preview.bands):
         radius_px = band.outer_radius_in * PREVIEW_SCALE
         item = scene.addEllipse(
@@ -169,12 +180,27 @@ def render_plan(scene: QGraphicsScene, preview: PlanPreview) -> None:
         if item is not None:
             item.setZValue(1.0)
 
+
+def _render_plan_ports(
+    scene: QGraphicsScene,
+    preview: PlanPreview,
+    center_x: float,
+    center_y: float,
+) -> None:
+    """Render lid ports (circles) and side ports (radial features)."""
     for port in preview.lid_ports:
         _add_plan_circle(scene, center_x, center_y, port, 5.0)
-
     for feature in preview.side_ports:
         _add_radial_feature(scene, center_x, center_y, feature, 6.0)
 
+
+def _render_plan_electrodes(
+    scene: QGraphicsScene,
+    preview: PlanPreview,
+    center_x: float,
+    center_y: float,
+) -> None:
+    """Render electrode placements as radial line features."""
     for placement in preview.electrodes:
         _add_radial_feature(
             scene,
