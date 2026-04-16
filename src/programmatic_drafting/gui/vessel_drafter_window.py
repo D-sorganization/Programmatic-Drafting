@@ -8,44 +8,40 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
-    QFormLayout,
-    QGraphicsScene,
-    QHBoxLayout,
-    QLabel,
     QMainWindow,
-    QPushButton,
-    QScrollArea,
-    QSpinBox,
     QTabWidget,
-    QVBoxLayout,
-    QWidget,
 )
 
 from programmatic_drafting.analysis.vessel_drafter_metrics import (
-    MaterialMetricsReport,
     build_material_metrics_report,
 )
 from programmatic_drafting.exporters.step_export import export_vessel_drafter_step
-from programmatic_drafting.gui.vessel_drafter_port_panel import (
-    PortTableSection,
-    make_double_spin,
-)
 from programmatic_drafting.gui.vessel_drafter_port_prompts import (
     prompt_add_lid_port,
     prompt_add_side_port,
 )
-from programmatic_drafting.gui.vessel_drafter_preview_panel import PreviewPanel
 from programmatic_drafting.gui.vessel_drafter_rendering import (
     render_cross_section,
     render_plan,
 )
-from programmatic_drafting.gui.vessel_drafter_three_d_canvas import (
-    VesselDrafterThreeDCanvas,
+from programmatic_drafting.gui.vessel_drafter_window_controls import (
+    build_dimension_controls,
+    build_electrode_controls,
+    build_port_panels,
+    build_preview_tabs,
+    build_preview_widgets,
+    build_ui,
+    dimension_controls,
 )
-from programmatic_drafting.gui.vessel_drafter_three_d_sidebar import (
-    VesselThreeDSidebar,
+from programmatic_drafting.gui.vessel_drafter_window_layout_io import (
+    add_lid_port_to_controls,
+    add_side_port_to_controls,
+    read_layout_from_controls,
+    write_layout_to_controls,
 )
-from programmatic_drafting.gui.zoomable_graphics_view import ZoomableGraphicsView
+from programmatic_drafting.gui.vessel_drafter_window_status import (
+    format_status_text as _format_status_text,
+)
 from programmatic_drafting.models.vessel_drafter import (
     DEFAULT_VESSEL_DRAFTER_LAYOUT,
     VesselDrafterLayout,
@@ -80,113 +76,19 @@ class VesselDrafterWindow(QMainWindow):
         self.resize(1400, 880)
 
     def _build_dimension_controls(self) -> None:
-        """Create vessel dimension controls."""
-        self.inner_diameter_spin = make_double_spin(50.0, 1.0, 500.0)
-        self.glass_depth_spin = make_double_spin(14.0, 1.0, 250.0)
-        self.plenum_height_spin = make_double_spin(14.0, 1.0, 250.0)
-        self.head_depth_spin = make_double_spin(12.5, 1.0, 250.0)
-        self.hot_face_spin = make_double_spin(6.0, 0.1, 50.0)
-        self.ifb_spin = make_double_spin(4.5, 0.1, 50.0)
-        self.duraboard_spin = make_double_spin(1.0, 0.1, 20.0)
-        self.steel_spin = make_double_spin(0.5, 0.1, 10.0)
+        build_dimension_controls(self)
 
     def _build_electrode_controls(self) -> None:
-        """Create electrode parameter controls."""
-        self.electrode_count_spin = QSpinBox()
-        self.electrode_count_spin.setRange(1, 12)
-        self.electrode_count_spin.setValue(3)
-        self.electrode_diameter_spin = make_double_spin(2.0, 0.1, 20.0)
-        self.electrode_insertion_spin = make_double_spin(14.0, 0.1, 100.0)
-        self.electrode_extension_spin = make_double_spin(36.0, 0.1, 150.0)
+        build_electrode_controls(self)
 
     def _build_port_panels(self) -> None:
-        """Create editable side and lid port panels."""
-        self.side_port_panel = PortTableSection(
-            "Side Ports",
-            ("Clock Angle", "Diameter", "Height Above Glass"),
-        )
-        self.lid_port_panel = PortTableSection(
-            "Lid Ports",
-            ("Clock Angle", "Diameter", "Distance From Center"),
-        )
+        build_port_panels(self)
 
     def _build_preview_widgets(self) -> None:
-        """Create preview scenes, views, canvas, and sidebar widgets."""
-        self.cross_section_scene = QGraphicsScene(self)
-        self.cross_section_view = ZoomableGraphicsView(self)
-        self.cross_section_view.setScene(self.cross_section_scene)
-        self.plan_scene = QGraphicsScene(self)
-        self.plan_view = ZoomableGraphicsView(self)
-        self.plan_view.setScene(self.plan_scene)
-        self.preview_tabs = QTabWidget(self)
-        self.three_d_canvas = VesselDrafterThreeDCanvas()
-        self.three_d_sidebar = VesselThreeDSidebar()
-        # Expose sidebar sub-widgets for backward compatibility with callers
-        # and tests that reach them through the window.
-        self.layer_visibility_checkboxes = (
-            self.three_d_sidebar.layer_visibility_checkboxes
-        )
-        self.section_cut_checkbox = self.three_d_sidebar.section_cut_checkbox
-        self.section_cut_angle_spin = self.three_d_sidebar.section_cut_angle_spin
-        self.material_summary_table = self.three_d_sidebar.material_summary_table
-        self.status_label = QLabel()
-        self.status_label.setWordWrap(True)
+        build_preview_widgets(self)
 
     def _build_ui(self) -> None:
-        root = QWidget()
-        self.setCentralWidget(root)
-
-        controls_scroll = self._build_controls_scroll_area()
-        preview_layout = QVBoxLayout()
-        preview_layout.addWidget(self._build_preview_tabs(), 1)
-
-        main_layout = QHBoxLayout(root)
-        main_layout.addWidget(controls_scroll, 0)
-        main_layout.addLayout(preview_layout, 1)
-
-    def _build_controls_form(self) -> QFormLayout:
-        """Build the static vessel/electrode controls form."""
-        controls_form = QFormLayout()
-        controls_form.addRow("Inner diameter (in)", self.inner_diameter_spin)
-        controls_form.addRow("Glass depth (in)", self.glass_depth_spin)
-        controls_form.addRow("Plenum height (in)", self.plenum_height_spin)
-        controls_form.addRow("Head depth (in)", self.head_depth_spin)
-        controls_form.addRow("Hot face (in)", self.hot_face_spin)
-        controls_form.addRow("IFB (in)", self.ifb_spin)
-        controls_form.addRow("Duraboard (in)", self.duraboard_spin)
-        controls_form.addRow("Steel (in)", self.steel_spin)
-        controls_form.addRow("Electrode count", self.electrode_count_spin)
-        controls_form.addRow("Electrode diameter (in)", self.electrode_diameter_spin)
-        controls_form.addRow("Electrode insertion (in)", self.electrode_insertion_spin)
-        controls_form.addRow("Electrode extension (in)", self.electrode_extension_spin)
-        return controls_form
-
-    def _build_action_buttons(self) -> tuple[QPushButton, QPushButton]:
-        """Create command buttons and wire their click handlers."""
-        self.refresh_button = QPushButton("Refresh Preview")
-        self.refresh_button.clicked.connect(self.update_preview)
-        self.export_button = QPushButton("Export STEP")
-        self.export_button.clicked.connect(self.export_step_dialog)
-        return self.refresh_button, self.export_button
-
-    def _build_controls_scroll_area(self) -> QScrollArea:
-        """Build the scrollable left-side controls column."""
-        refresh_button, export_button = self._build_action_buttons()
-        controls_root = QWidget()
-        controls_layout = QVBoxLayout(controls_root)
-        controls_layout.addLayout(self._build_controls_form())
-        controls_layout.addWidget(self.side_port_panel)
-        controls_layout.addWidget(self.lid_port_panel)
-        controls_layout.addWidget(refresh_button)
-        controls_layout.addWidget(export_button)
-        controls_layout.addWidget(self.status_label)
-        controls_layout.addStretch(1)
-
-        controls_scroll = QScrollArea()
-        controls_scroll.setWidgetResizable(True)
-        controls_scroll.setWidget(controls_root)
-        controls_scroll.setMinimumWidth(340)
-        return controls_scroll
+        build_ui(self)
 
     def _connect_signals(self) -> None:
         self._connect_dimension_signals()
@@ -194,21 +96,7 @@ class VesselDrafterWindow(QMainWindow):
         self._connect_preview_signals()
 
     def _dimension_controls(self) -> tuple:
-        """Return controls whose value changes refresh the 2D previews."""
-        return (
-            self.inner_diameter_spin,
-            self.glass_depth_spin,
-            self.plenum_height_spin,
-            self.head_depth_spin,
-            self.hot_face_spin,
-            self.ifb_spin,
-            self.duraboard_spin,
-            self.steel_spin,
-            self.electrode_count_spin,
-            self.electrode_diameter_spin,
-            self.electrode_insertion_spin,
-            self.electrode_extension_spin,
-        )
+        return dimension_controls(self)
 
     def _connect_dimension_signals(self) -> None:
         """Connect scalar dimension/electrode controls to preview refresh."""
@@ -242,96 +130,18 @@ class VesselDrafterWindow(QMainWindow):
         )
 
     def write_layout(self, layout: VesselDrafterLayout) -> None:
-        self._suppress_preview_updates = True
-        self.inner_diameter_spin.setValue(layout.inner_diameter_in)
-        self.glass_depth_spin.setValue(layout.glass_depth_in)
-        self.plenum_height_spin.setValue(layout.plenum_height_in)
-        self.head_depth_spin.setValue(layout.head_depth_in)
-        self.hot_face_spin.setValue(layout.hot_face_thickness_in)
-        self.ifb_spin.setValue(layout.ifb_thickness_in)
-        self.duraboard_spin.setValue(layout.duraboard_thickness_in)
-        self.steel_spin.setValue(layout.steel_thickness_in)
-        self.electrode_count_spin.setValue(layout.electrode_count)
-        self.electrode_diameter_spin.setValue(layout.electrode_diameter_in)
-        self.electrode_insertion_spin.setValue(
-            layout.electrode_insertion_into_inner_circle_in
-        )
-        self.electrode_extension_spin.setValue(
-            layout.electrode_extension_past_inner_circle_in
-        )
-        self.side_port_panel.set_rows(
-            tuple(
-                (
-                    port.normalized_clock_angle_degrees,
-                    port.diameter_in,
-                    port.height_above_glass_surface_in,
-                )
-                for port in layout.side_ports
-            )
-        )
-        self.lid_port_panel.set_rows(
-            tuple(
-                (
-                    port.normalized_clock_angle_degrees,
-                    port.diameter_in,
-                    port.radial_distance_from_center_in,
-                )
-                for port in layout.lid_ports
-            )
-        )
-        self._suppress_preview_updates = False
+        write_layout_to_controls(self, layout)
 
     def add_side_port(self, port: VesselSidePort) -> None:
-        self.side_port_panel.append_row(
-            (
-                port.normalized_clock_angle_degrees,
-                port.diameter_in,
-                port.height_above_glass_surface_in,
-            )
-        )
+        add_side_port_to_controls(self, port)
         self.update_preview()
 
     def add_lid_port(self, port: VesselLidPort) -> None:
-        self.lid_port_panel.append_row(
-            (
-                port.normalized_clock_angle_degrees,
-                port.diameter_in,
-                port.radial_distance_from_center_in,
-            )
-        )
+        add_lid_port_to_controls(self, port)
         self.update_preview()
 
     def read_layout(self) -> VesselDrafterLayout:
-        return VesselDrafterLayout(
-            inner_diameter_in=self.inner_diameter_spin.value(),
-            glass_depth_in=self.glass_depth_spin.value(),
-            plenum_height_in=self.plenum_height_spin.value(),
-            head_depth_in=self.head_depth_spin.value(),
-            hot_face_thickness_in=self.hot_face_spin.value(),
-            ifb_thickness_in=self.ifb_spin.value(),
-            duraboard_thickness_in=self.duraboard_spin.value(),
-            steel_thickness_in=self.steel_spin.value(),
-            electrode_count=self.electrode_count_spin.value(),
-            electrode_diameter_in=self.electrode_diameter_spin.value(),
-            electrode_insertion_into_inner_circle_in=self.electrode_insertion_spin.value(),
-            electrode_extension_past_inner_circle_in=self.electrode_extension_spin.value(),
-            side_ports=tuple(
-                VesselSidePort(
-                    clock_angle_degrees=angle,
-                    diameter_in=diameter,
-                    height_above_glass_surface_in=height,
-                )
-                for angle, diameter, height in self.side_port_panel.rows()
-            ),
-            lid_ports=tuple(
-                VesselLidPort(
-                    clock_angle_degrees=angle,
-                    diameter_in=diameter,
-                    radial_distance_from_center_in=radius,
-                )
-                for angle, diameter, radius in self.lid_port_panel.rows()
-            ),
-        )
+        return read_layout_from_controls(self)
 
     def update_preview(self) -> None:
         if self._suppress_preview_updates:
@@ -413,25 +223,7 @@ class VesselDrafterWindow(QMainWindow):
         self.update_preview()
 
     def _build_preview_tabs(self) -> QTabWidget:
-        previews_tab = QWidget()
-        previews_layout = QVBoxLayout(previews_tab)
-        previews_layout.addWidget(
-            PreviewPanel("Cross-Section Preview", self.cross_section_view),
-            1,
-        )
-        previews_layout.addWidget(
-            PreviewPanel("Top View Preview", self.plan_view),
-            1,
-        )
-
-        three_d_tab = QWidget()
-        three_d_layout = QHBoxLayout(three_d_tab)
-        three_d_layout.addWidget(self.three_d_canvas, 1)
-        three_d_layout.addWidget(self.three_d_sidebar, 0)
-
-        self.preview_tabs.addTab(previews_tab, "2D Previews")
-        self.preview_tabs.addTab(three_d_tab, "3D Preview")
-        return self.preview_tabs
+        return build_preview_tabs(self)
 
     def _update_three_d_preview(self, layout: VesselDrafterLayout) -> None:
         view_options = self.three_d_sidebar.read_view_options()
@@ -472,18 +264,3 @@ def launch() -> int:
     window = VesselDrafterWindow()
     window.show()
     return app.exec()
-
-
-def _format_status_text(
-    layout: VesselDrafterLayout,
-    metrics: MaterialMetricsReport,
-) -> str:
-    """Build the compact status summary shown after preview refresh."""
-    return (
-        f"Outer diameter: {layout.outer_diameter_in:.2f} in | "
-        f"Full height: {layout.full_height_in:.2f} in | "
-        f"Ports: {len(layout.side_ports)} side, {len(layout.lid_ports)} lid | "
-        f"Refractory: {metrics.refractory_total_volume_ft3:.2f} ft^3, "
-        f"{metrics.refractory_total_surface_area_ft2:.2f} ft^2, "
-        f"{metrics.refractory_total_mass_lb:.1f} lb"
-    )
