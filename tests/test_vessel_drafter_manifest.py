@@ -106,6 +106,6 @@ def test_build_drafting_assumptions_manifest_is_stable() -> None:
         "axis_convention": "Z up",
         "plenum_only_internal_void": True,
         "dished_heads": (
-            "Offset elliptical head profiles with " "constant-thickness shell layers"
+            "Offset elliptical head profiles with constant-thickness shell layers"
         ),
     }
