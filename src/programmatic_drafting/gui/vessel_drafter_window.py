@@ -7,8 +7,14 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
+    QDoubleSpinBox,
     QFileDialog,
+    QGraphicsScene,
+    QLabel,
     QMainWindow,
+    QPushButton,
+    QSpinBox,
     QTabWidget,
 )
 
@@ -16,6 +22,8 @@ from programmatic_drafting.analysis.vessel_drafter_metrics import (
     build_material_metrics_report,
 )
 from programmatic_drafting.exporters.step_export import export_vessel_drafter_step
+from programmatic_drafting.gui.material_summary_table import MaterialSummaryTable
+from programmatic_drafting.gui.vessel_drafter_port_panel import PortTableSection
 from programmatic_drafting.gui.vessel_drafter_port_prompts import (
     prompt_add_lid_port,
     prompt_add_side_port,
@@ -24,11 +32,16 @@ from programmatic_drafting.gui.vessel_drafter_rendering import (
     render_cross_section,
     render_plan,
 )
+from programmatic_drafting.gui.vessel_drafter_three_d_canvas import (
+    VesselDrafterThreeDCanvas,
+)
+from programmatic_drafting.gui.vessel_drafter_three_d_sidebar import (
+    VesselThreeDSidebar,
+)
 from programmatic_drafting.gui.vessel_drafter_window_controls import (
     build_dimension_controls,
     build_electrode_controls,
     build_port_panels,
-    build_preview_tabs,
     build_preview_widgets,
     build_ui,
     dimension_controls,
@@ -42,6 +55,7 @@ from programmatic_drafting.gui.vessel_drafter_window_layout_io import (
 from programmatic_drafting.gui.vessel_drafter_window_status import (
     format_status_text as _format_status_text,
 )
+from programmatic_drafting.gui.zoomable_graphics_view import ZoomableGraphicsView
 from programmatic_drafting.models.vessel_drafter import (
     DEFAULT_VESSEL_DRAFTER_LAYOUT,
     VesselDrafterLayout,
@@ -56,16 +70,45 @@ from programmatic_drafting.preview.vessel_drafter_scene import build_vessel_3d_s
 
 
 class VesselDrafterWindow(QMainWindow):
+    inner_diameter_spin: QDoubleSpinBox
+    glass_depth_spin: QDoubleSpinBox
+    plenum_height_spin: QDoubleSpinBox
+    head_depth_spin: QDoubleSpinBox
+    hot_face_spin: QDoubleSpinBox
+    ifb_spin: QDoubleSpinBox
+    duraboard_spin: QDoubleSpinBox
+    steel_spin: QDoubleSpinBox
+    electrode_count_spin: QSpinBox
+    electrode_diameter_spin: QDoubleSpinBox
+    electrode_insertion_spin: QDoubleSpinBox
+    electrode_extension_spin: QDoubleSpinBox
+    side_port_panel: PortTableSection
+    lid_port_panel: PortTableSection
+    cross_section_scene: QGraphicsScene
+    cross_section_view: ZoomableGraphicsView
+    plan_scene: QGraphicsScene
+    plan_view: ZoomableGraphicsView
+    preview_tabs: QTabWidget
+    three_d_canvas: VesselDrafterThreeDCanvas
+    three_d_sidebar: VesselThreeDSidebar
+    layer_visibility_checkboxes: dict[str, QCheckBox]
+    section_cut_checkbox: QCheckBox
+    section_cut_angle_spin: QDoubleSpinBox
+    material_summary_table: MaterialSummaryTable
+    status_label: QLabel
+    refresh_button: QPushButton
+    export_button: QPushButton
+
     def __init__(self) -> None:
         super().__init__()
         self._configure_window()
         self._suppress_preview_updates = False
         self._three_d_preview_dirty = True
-        self._build_dimension_controls()
-        self._build_electrode_controls()
-        self._build_port_panels()
-        self._build_preview_widgets()
-        self._build_ui()
+        build_dimension_controls(self)
+        build_electrode_controls(self)
+        build_port_panels(self)
+        build_preview_widgets(self)
+        build_ui(self)
         self._connect_signals()
         self.write_layout(DEFAULT_VESSEL_DRAFTER_LAYOUT)
         self.update_preview()
@@ -74,21 +117,6 @@ class VesselDrafterWindow(QMainWindow):
         """Apply static top-level window settings."""
         self.setWindowTitle("Vessel Drafter")
         self.resize(1400, 880)
-
-    def _build_dimension_controls(self) -> None:
-        build_dimension_controls(self)
-
-    def _build_electrode_controls(self) -> None:
-        build_electrode_controls(self)
-
-    def _build_port_panels(self) -> None:
-        build_port_panels(self)
-
-    def _build_preview_widgets(self) -> None:
-        build_preview_widgets(self)
-
-    def _build_ui(self) -> None:
-        build_ui(self)
 
     def _connect_signals(self) -> None:
         self._connect_dimension_signals()
@@ -221,9 +249,6 @@ class VesselDrafterWindow(QMainWindow):
     def _remove_selected_lid_ports(self) -> None:
         self.lid_port_panel.remove_selected_rows()
         self.update_preview()
-
-    def _build_preview_tabs(self) -> QTabWidget:
-        return build_preview_tabs(self)
 
     def _update_three_d_preview(self, layout: VesselDrafterLayout) -> None:
         view_options = self.three_d_sidebar.read_view_options()
