@@ -8,7 +8,20 @@ from programmatic_drafting.gui.vessel_drafter_window import (
     VesselDrafterWindow,
     _format_status_text,
 )
-from programmatic_drafting.models.vessel_drafter import VesselLidPort, VesselSidePort
+from programmatic_drafting.gui.vessel_drafter_window_layout_io import (
+    lid_port_rows,
+    lid_ports_from_rows,
+    read_layout_from_controls,
+    side_port_rows,
+    side_ports_from_rows,
+    write_layout_to_controls,
+)
+from programmatic_drafting.gui.vessel_drafter_window_status import format_status_text
+from programmatic_drafting.models.vessel_drafter import (
+    VesselDrafterLayout,
+    VesselLidPort,
+    VesselSidePort,
+)
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -183,6 +196,80 @@ def test_format_status_text_summarizes_layout_and_metrics() -> None:
     assert f"Outer diameter: {layout.outer_diameter_in:.2f} in" in status
     assert "Ports: 0 side, 0 lid" in status
     assert "Refractory: 2.00 ft^3, 3.50 ft^2, 456.7 lb" in status
+
+    window.close()
+    app.quit()
+
+
+def test_port_row_helpers_round_trip_port_models() -> None:
+    side_port = VesselSidePort(
+        clock_angle_degrees=420.0,
+        diameter_in=3.0,
+        height_above_glass_surface_in=5.0,
+    )
+    lid_port = VesselLidPort(
+        clock_angle_degrees=-90.0,
+        diameter_in=4.0,
+        radial_distance_from_center_in=9.0,
+    )
+
+    side_rows = side_port_rows((side_port,))
+    lid_rows = lid_port_rows((lid_port,))
+
+    assert side_rows == ((60.0, 3.0, 5.0),)
+    assert lid_rows == ((270.0, 4.0, 9.0),)
+    assert side_ports_from_rows(side_rows)[0].clock_angle_degrees == pytest.approx(60.0)
+    assert lid_ports_from_rows(lid_rows)[0].clock_angle_degrees == pytest.approx(270.0)
+
+
+def test_window_layout_io_helpers_round_trip_controls() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = VesselDrafterWindow()
+    layout = VesselDrafterLayout(
+        inner_diameter_in=64.0,
+        glass_depth_in=15.0,
+        side_ports=(
+            VesselSidePort(
+                clock_angle_degrees=30.0,
+                diameter_in=2.0,
+                height_above_glass_surface_in=3.0,
+            ),
+        ),
+        lid_ports=(
+            VesselLidPort(
+                clock_angle_degrees=120.0,
+                diameter_in=3.0,
+                radial_distance_from_center_in=8.0,
+            ),
+        ),
+    )
+
+    write_layout_to_controls(window, layout)
+    read_back = read_layout_from_controls(window)
+
+    assert window._suppress_preview_updates is False
+    assert read_back.inner_diameter_in == pytest.approx(64.0)
+    assert read_back.glass_depth_in == pytest.approx(15.0)
+    assert read_back.side_ports[0].diameter_in == pytest.approx(2.0)
+    assert read_back.lid_ports[0].radial_distance_from_center_in == pytest.approx(8.0)
+
+    window.close()
+    app.quit()
+
+
+def test_status_module_matches_window_compatibility_alias() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = VesselDrafterWindow()
+    layout = window.read_layout()
+    metrics = MaterialMetricsReport(
+        component_metrics=(),
+        refractory_total_volume_in3=1728.0,
+        refractory_total_volume_ft3=1.0,
+        refractory_total_surface_area_ft2=2.5,
+        refractory_total_mass_lb=345.6,
+    )
+
+    assert _format_status_text(layout, metrics) == format_status_text(layout, metrics)
 
     window.close()
     app.quit()
