@@ -12,6 +12,7 @@ dependencies = [
   "build123d==0.10.0",
   "matplotlib==3.10.8",
   "PyQt6==6.8.1",
+  "scipy<1.16",
 ]
 
 [project.optional-dependencies]
