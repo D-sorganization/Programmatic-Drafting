@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from math import fmod
-from typing import Any
+from typing import Any, cast
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from programmatic_drafting.preview.vessel_drafter_scene import Vessel3DScene
 from programmatic_drafting.preview.vessel_drafter_view_options import (
@@ -46,7 +47,7 @@ class VesselDrafterThreeDCanvas(FigureCanvasQTAgg):
         self.current_labels = tuple(mesh.label for mesh in scene.meshes)
         self.current_face_count = sum(len(mesh.faces) for mesh in scene.meshes)
         self.figure.clear()
-        axes = self.figure.add_subplot(111, projection="3d")
+        axes = cast(Axes3D, self.figure.add_subplot(111, projection="3d"))
         meshes = scene.meshes
         if resolved_view_options.split_enabled:
             meshes = tuple(reversed(meshes))
