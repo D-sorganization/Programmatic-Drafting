@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from build123d import Align, Box, BuildPart, Compound, Cylinder, Locations, Mode
+from build123d import Align, Box, BuildPart, Compound, Cylinder, Locations, Mode  # type: ignore[import-not-found]
 
 from programmatic_drafting.models.electrode_advisor import (
     DEFAULT_ELECTRODE_ADVISOR_LAYOUT,

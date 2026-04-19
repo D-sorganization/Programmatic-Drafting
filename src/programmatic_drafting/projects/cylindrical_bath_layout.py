@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from build123d import Align, BuildPart, Compound, Cylinder, Mode, Plane, Solid
+from build123d import Align, BuildPart, Compound, Cylinder, Mode, Plane, Solid  # type: ignore[import-not-found]
 
 from programmatic_drafting.models.cylindrical_bath import (
     DEFAULT_CYLINDRICAL_BATH_LAYOUT,

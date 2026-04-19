@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from build123d import export_step
+from build123d import export_step  # type: ignore[import-not-found]
 
 from programmatic_drafting.analysis.vessel_drafter_metrics import (
     build_material_metrics_report,
