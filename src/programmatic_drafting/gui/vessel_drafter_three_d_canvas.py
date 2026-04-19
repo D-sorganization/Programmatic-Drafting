@@ -7,8 +7,8 @@ from typing import Any, cast
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from mpl_toolkits.mplot3d.axes3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection  # type: ignore[import-untyped]
+from mpl_toolkits.mplot3d.axes3d import Axes3D  # type: ignore[import-untyped]
 
 from programmatic_drafting.preview.vessel_drafter_scene import Vessel3DScene
 from programmatic_drafting.preview.vessel_drafter_view_options import (

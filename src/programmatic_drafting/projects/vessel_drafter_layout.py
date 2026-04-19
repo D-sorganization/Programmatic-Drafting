@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from math import cos, sin
 from typing import Any
 
-from build123d import (
+from build123d import (  # type: ignore[import-not-found]
     Axis,
     BuildLine,
     BuildSketch,
